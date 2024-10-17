@@ -5,8 +5,14 @@ name: Run Tests
 on:
   pull_request:
     branches: [ "main" ]
+    paths:
+      - "src/**"
+      - "pom.xml"
   push:
     branches: [ "main" ]
+    paths:
+      - "src/**"
+      - "pom.xml"
 
 jobs:
   build:
