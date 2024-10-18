@@ -1,10 +1,9 @@
-package io.spoud;
+package io.spoud.kafka;
 
 import io.quarkus.logging.Log;
 import io.quarkus.scheduler.Scheduled;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.spoud.config.SynthClientConfig;
-import io.spoud.kafka.MessageProducer;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

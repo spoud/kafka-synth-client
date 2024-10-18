@@ -7,6 +7,7 @@ import io.quarkus.test.kafka.KafkaCompanionResource;
 import io.restassured.RestAssured;
 import io.smallrye.reactive.messaging.kafka.companion.KafkaCompanion;
 import io.spoud.config.SynthClientConfig;
+import io.spoud.kafka.PartitionRebalancer;
 import jakarta.inject.Inject;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.junit.jupiter.api.DisplayName;

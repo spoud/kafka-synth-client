@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.scheduler.Scheduled;
 import io.spoud.config.SynthClientConfig;
 import io.spoud.kafka.MessageProducer;
+import io.spoud.kafka.PartitionRebalancer;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.random.RandomGenerator;

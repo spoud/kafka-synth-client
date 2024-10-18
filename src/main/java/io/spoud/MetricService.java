@@ -3,6 +3,7 @@ package io.spoud;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.logging.Log;
+import io.spoud.kafka.PartitionRebalancer;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.time.Duration;
