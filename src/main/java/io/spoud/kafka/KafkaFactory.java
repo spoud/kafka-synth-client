@@ -1,6 +1,5 @@
 package io.spoud.kafka;
 
-import io.smallrye.common.annotation.Identifier;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
@@ -15,6 +14,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.LongSerializer;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,8 +24,8 @@ import java.util.Set;
 public class KafkaFactory {
 
     @Inject
-    @Identifier("default-kafka-broker")
-    Map<String, Object> config;
+    @ConfigProperty(name = "kafka")
+    Map<String, String> config;
 
     @Produces
     AdminClient getAdmin() {
@@ -48,7 +48,7 @@ public class KafkaFactory {
 
     Map<String, Object> getKafkaConfig(Set<String> keys) {
         Map<String, Object> copy = new HashMap<>();
-        for (Map.Entry<String, Object> entry : config.entrySet()) {
+        for (Map.Entry<String, String> entry : config.entrySet()) {
             if (keys.contains(entry.getKey())) {
                 copy.put(entry.getKey(), entry.getValue());
             }

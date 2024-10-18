@@ -8,6 +8,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.WakeupException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -78,6 +79,8 @@ public class MessageConsumer implements Runnable, AutoCloseable {
                     counter.incrementAndGet();
                 }
             }
+        } catch (WakeupException e) {
+            // Ignore
         } catch (Exception e) {
             Log.error("Error while consuming messages", e);
         } finally {
