@@ -6,14 +6,15 @@ import io.quarkus.test.kafka.InjectKafkaCompanion;
 import io.quarkus.test.kafka.KafkaCompanionResource;
 import io.restassured.RestAssured;
 import io.smallrye.reactive.messaging.kafka.companion.KafkaCompanion;
+import io.spoud.config.SynthClientConfig;
 import jakarta.inject.Inject;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,8 +28,8 @@ public class KafkaSynthClientTest {
     @Inject
     PartitionRebalancer partitionRebalancer;
 
-    @ConfigProperty(name = "kafka.topic")
-    String topic;
+    @Inject
+    SynthClientConfig config;
 
     @Test
     @DisplayName("Broker->Partition mapping is successfully generated")
@@ -47,13 +48,14 @@ public class KafkaSynthClientTest {
     @DisplayName("End-to-end latency metrics are recorded")
     public void testEndToEndLatencyRecorded() {
         kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
-                .fromTopics(topic, 3)
+                .fromTopics(config.topic(), 3)
                 .awaitCompletion(Duration.ofSeconds(5));
 
         var metrics = RestAssured.get("/q/metrics").asString();
 
-        assertTrue(metrics.contains("synth_client_e2e_latency_ms{broker=\"0\",quantile=\"0.5\"}"));
-        assertTrue(metrics.contains("synth_client_e2e_latency_ms{broker=\"0\",quantile=\"0.95\"}"));
-        assertTrue(metrics.contains("synth_client_e2e_latency_ms{broker=\"0\",quantile=\"0.99\"}"));
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",partition=\"0\",quantile=\"0.5\"}");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",partition=\"0\",quantile=\"0.5\"}");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",partition=\"0\",quantile=\"0.95\"}");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",partition=\"0\",quantile=\"0.99\"}");
     }
 }

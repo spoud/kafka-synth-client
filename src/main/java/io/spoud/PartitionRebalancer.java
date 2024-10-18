@@ -3,6 +3,8 @@ package io.spoud;
 import io.quarkus.logging.Log;
 import io.quarkus.scheduler.Scheduled;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
+import io.spoud.config.SynthClientConfig;
+import io.spoud.kafka.MessageProducer;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -12,26 +14,33 @@ import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartition;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
-import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
 public class PartitionRebalancer {
-    @ConfigProperty(name = "mp.messaging.incoming.msg-in.topic")
-    String topic;
+
+    @Inject
+    SynthClientConfig config;
 
     @Inject
     AdminClient adminClient;
 
     @Inject
-    WrappedKafkaProducer producer;
+    MessageProducer producer;
 
     boolean refreshPartitionsEnabled = true;
+    Map<Integer, List<Integer>> partitionsByBroker = new ConcurrentHashMap<>();
 
     NewPartitionReassignment genReassignment(Node leader, int replicationFactor, Collection<Node> nodes) {
         var replicaCandidates = nodes.stream()
@@ -47,19 +56,27 @@ public class PartitionRebalancer {
         return new NewPartitionReassignment(replicaIds);
     }
 
-    int getTopicReplicationFactor(TopicDescription topicDescription) {
-        return topicDescription.partitions().get(0).replicas().size();
+    // TODO what about the topic ?
+    public Optional<Integer> getBrokerIdForPartition(String topic, int partition) {
+        for (var entry : getPartitionsByBroker().entrySet()) {
+            var brokerId = entry.getKey();
+            var partitions = entry.getValue();
+            if (partitions.contains(partition)) {
+                return Optional.of(brokerId);
+            }
+        }
+
+        return Optional.empty();
+
     }
 
-    public String getTopic() {
-        return topic;
+    int getTopicReplicationFactor(TopicDescription topicDescription) {
+        return topicDescription.partitions().get(0).replicas().size();
     }
 
     public Map<Integer, List<Integer>> getPartitionsByBroker() {
         return new HashMap<>(partitionsByBroker); // return a copy
     }
-
-    Map<Integer, List<Integer>> partitionsByBroker = new ConcurrentHashMap<>();
 
     void reassignPartitionsToBrokers(TopicDescription topicDescription, Collection<Node> nodes) {
         // build a map of broker -> list of partitions
@@ -68,14 +85,14 @@ public class PartitionRebalancer {
         for (var partition : topicDescription.partitions()) {
             var leader = partition.leader();
             if (leader == null) {
-                Log.warn("Partition " + partition.partition() + " has no leader");
+                Log.warnv("Partition {0} has no leader", partition.partition());
                 continue;
             }
             partitionsByBroker.computeIfAbsent(leader.id(), (k) -> new ArrayList<>()).add(partition.partition());
         }
         // print partitions by broker
         for (var entry : partitionsByBroker.entrySet()) {
-            Log.info("Broker " + entry.getKey() + " has partitions " + entry.getValue());
+            Log.infov("Broker {0} has partitions {1}", entry.getKey(), entry.getValue());
         }
         // sort the brokers by the number of partitions they are a leader for
         brokers.sort(Comparator.comparingLong(n -> partitionsByBroker.computeIfAbsent(n.id(), (k) -> new ArrayList<>()).size()));
@@ -95,13 +112,13 @@ public class PartitionRebalancer {
             }
             var partitionToGive = partitionsByBroker.get(richBroker.id()).remove(0);
             partitionsByBroker.get(poorBroker.id()).add(partitionToGive);
-            var tp = new TopicPartition(topic, partitionToGive);
+            var tp = new TopicPartition(config.topic(), partitionToGive);
 
             var assignment = genReassignment(poorBroker, getTopicReplicationFactor(topicDescription), nodes);
             try {
                 adminClient.alterPartitionReassignments(Map.of(tp, Optional.of(assignment))).all().getNow(null);
             } catch (Exception e) {
-                Log.error("Failed to reassign partition " + partitionToGive + " to broker " + poorBroker.id(), e);
+                Log.errorv(e, "Failed to reassign partition {0} to broker {1}", partitionToGive, poorBroker.id());
                 break;
             }
 
@@ -111,7 +128,7 @@ public class PartitionRebalancer {
             i++;
         }
         for (var entry : partitionsByBroker.entrySet()) {
-            Log.info("New assignment: Broker " + entry.getKey() + " has partitions " + entry.getValue());
+            Log.infov("New assignment: Broker {0} has partitions {1}", entry.getKey(), entry.getValue());
         }
         producer.recreateProducer(); // recreate the producer to make sure that it is aware of the new partitions
     }
@@ -144,19 +161,19 @@ public class PartitionRebalancer {
             }
             Log.info("Cluster has " + nodes.size() + " nodes");
             // make sure that the topic has at least as many partitions as there are brokers
-            var description = adminClient.describeTopics(List.of(topic));
+            var description = adminClient.describeTopics(List.of(config.topic()));
             description.allTopicNames().whenComplete((topics, throwable1) -> {
                 if (throwable1 != null) {
                     Log.error("Failed to get topic names", throwable1);
                     return;
                 }
-                var topicDescr = topics.get(topic);
-                Log.info("Topic " + topic + " has " + topicDescr.partitions().size() + " partitions");
+                var topicDescr = topics.get(config.topic());
+                Log.infov("Topic {0} has {1} partitions", config.topic(), topicDescr.partitions().size());
                 if (topicDescr.partitions().size() < nodes.size()) {
                     var partitionsToCreate = nodes.size() - topicDescr.partitions().size();
-                    Log.info("Will create " + partitionsToCreate + " additional partitions");
+                    Log.infov("Will create {0} additional partitions", partitionsToCreate);
                     try {
-                        adminClient.createPartitions(Map.of(topic, NewPartitions.increaseTo(nodes.size()))).all().getNow(null);
+                        adminClient.createPartitions(Map.of(config.topic(), NewPartitions.increaseTo(nodes.size()))).all().getNow(null);
                     } catch (Exception e) {
                         Log.error("Failed to create partitions", e);
                     }
