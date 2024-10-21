@@ -2,6 +2,7 @@ package io.spoud.kafka;
 
 import io.quarkus.logging.Log;
 import io.spoud.MetricService;
+import io.spoud.TimeService;
 import io.spoud.config.SynthClientConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -23,13 +24,18 @@ public class MessageConsumer implements Runnable, AutoCloseable {
     private final SynthClientConfig config;
     private final KafkaConsumer<Long, byte[]> consumer;
     private final MetricService metricService;
+    private final TimeService timeService;
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final AtomicReference<Instant> lastReport = new AtomicReference<>(Instant.now());
     private final AtomicLong counter = new AtomicLong(0);
 
-    public MessageConsumer(KafkaFactory kafkaFactory, SynthClientConfig config, MetricService metricService) {
+    public MessageConsumer(KafkaFactory kafkaFactory,
+                           SynthClientConfig config,
+                           MetricService metricService,
+                           TimeService timeService) {
         this.config = config;
         this.metricService = metricService;
+        this.timeService = timeService;
         consumer = kafkaFactory.createConsumer();
     }
 
@@ -67,7 +73,7 @@ public class MessageConsumer implements Runnable, AutoCloseable {
                 ConsumerRecords<Long, byte[]> records = consumer.poll(Duration.ofSeconds(1));
                 for (ConsumerRecord<Long, byte[]> message : records) {
                     long produceTime = message.timestamp();
-                    long consumeTime = System.currentTimeMillis();
+                    long consumeTime = timeService.currentTimeMillis();
                     metricService.recordLatency(message.topic(), message.partition(), consumeTime - produceTime);
                     lastReport.updateAndGet(last -> {
                         if (Duration.between(last, Instant.now()).getSeconds() > 10) {

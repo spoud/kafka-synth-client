@@ -10,5 +10,8 @@ public interface SynthClientConfig {
     @WithDefault("1")
     int consumersCount();
 
+    @WithDefault("time.google.com")
+    String timeServers();
+
     SynthClientConfigMessages messages();
 }
