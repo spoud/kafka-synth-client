@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicLong;
 
-// this implementation is inspired by
 public class TimeService {
     private final AtomicLong clockOffset = new AtomicLong(0);
     private int timeServerIndex = 0;
