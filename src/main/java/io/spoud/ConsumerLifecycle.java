@@ -18,10 +18,13 @@ public class ConsumerLifecycle {
     private final ExecutorService executorService;
     private final List<MessageConsumer> consumers;
 
-    public ConsumerLifecycle(SynthClientConfig config, KafkaFactory kafkaFactory, MetricService metricService) {
+    public ConsumerLifecycle(SynthClientConfig config,
+                             KafkaFactory kafkaFactory,
+                             MetricService metricService,
+                             TimeService timeService) {
         this.executorService = Executors.newFixedThreadPool(config.consumersCount(), new NamedThreadFactory("kafka-consumer"));
         this.consumers = IntStream.range(0, config.consumersCount())
-                .mapToObj(i -> new MessageConsumer(kafkaFactory, config, metricService))
+                .mapToObj(i -> new MessageConsumer(kafkaFactory, config, metricService, timeService))
                 .toList();
     }
 
