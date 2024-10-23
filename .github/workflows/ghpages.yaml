@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feature/docs # To be removed
 
 jobs:
   build:
