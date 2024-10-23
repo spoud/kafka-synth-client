@@ -1,0 +1,28 @@
+== Parameters
+
+You have the possibility to tweak the configuration using environment variables.
+
+|===
+|Parameter | default | Description
+
+| `KAFKA_BOOTSTRAP_SERVERS`
+| _<mandatory>_
+| Kafka bootstrap servers
+
+| `KAFKA_TOPIC`
+| _<mandatory>_
+| The Kafka topic to produce to and consume from.
+
+| `MESSAGE_SIZE_BYTES`
+| 8
+| The size of each Kafka message in bytes.
+
+| `MESSAGES_PER_SECOND`
+| 1
+| The number of messages to produce per second.
+
+| `QUARKUS_HTTP_PORT`
+| 8081
+| The port on which the metrics endpoint will be exposed.
+|===
+
