@@ -1,11 +1,15 @@
 package io.spoud;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.quarkus.logging.Log;
 import io.spoud.config.SynthClientConfig;
 import io.spoud.config.SynthClientConfigMessages;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 class TimeServiceTest {
 
@@ -24,7 +28,7 @@ class TimeServiceTest {
 
             @Override
             public String timeServers() {
-                return "0.asia.pool.ntp.org";
+                return "au.pool.ntp.org";
             }
 
             @Override
@@ -33,14 +37,18 @@ class TimeServiceTest {
             }
         });
 
-        timeService.updateClockOffset(); // make sure that this even works without exceptions
+        await()
+                .atMost(Duration.ofSeconds(30))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> {
+                    timeService.updateClockOffset(); // make sure that this even works without exceptions
 
-        var offset = timeService.getClockOffset();
-        assertThat(Math.abs(offset)).isGreaterThan(0); // some skew is expected
+                    var offset = timeService.getClockOffset();
+                    assertThat(Math.abs(offset)).isGreaterThan(0); // some skew is expected
 
-        long currentTimeMillis = timeService.currentTimeMillis();
-        assertThat(currentTimeMillis).isEqualTo(System.currentTimeMillis() + offset);
-        System.out.println("Current time: " + currentTimeMillis);
-        System.out.println("Clock offset: " + timeService.getClockOffset() + " ms");
+                    long currentTimeMillis = timeService.currentTimeMillis();
+                    assertThat(currentTimeMillis).isEqualTo(System.currentTimeMillis() + offset);
+                    Log.infov("Clock offset: {0} ms", timeService.getClockOffset());
+                });
     }
 }
