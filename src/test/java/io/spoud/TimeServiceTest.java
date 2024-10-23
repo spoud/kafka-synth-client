@@ -24,7 +24,7 @@ class TimeServiceTest {
 
             @Override
             public String timeServers() {
-                return "time.google.com,time.aws.com";
+                return "0.asia.pool.ntp.org";
             }
 
             @Override
