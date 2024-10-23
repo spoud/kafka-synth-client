@@ -43,13 +43,13 @@ $ curl localhost:8081/q/metrics -s | grep synth_client_e2e
 synth_client_e2e_latency_ms_max{broker="0"} 365.0
 # TYPE synth_client_e2e_latency_ms summary
 # HELP synth_client_e2e_latency_ms End-to-end latency of the synthetic client
-synth_client_e2e_latency_ms{broker="0",quantile="0.5"} 7.125
-synth_client_e2e_latency_ms{broker="0",quantile="0.8"} 11.375
-synth_client_e2e_latency_ms{broker="0",quantile="0.9"} 12.375
-synth_client_e2e_latency_ms{broker="0",quantile="0.95"} 16.875
-synth_client_e2e_latency_ms{broker="0",quantile="0.99"} 367.875
-synth_client_e2e_latency_ms_count{broker="0"} 60.0
-synth_client_e2e_latency_ms_sum{broker="0"} 825.0
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.5"} 7.125
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.8"} 11.375
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.9"} 12.375
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.95"} 16.875
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.99"} 367.875
+synth_client_e2e_latency_ms_count{broker="0",from="dc1",partition="0",to="dc1"} 60.0
+synth_client_e2e_latency_ms_sum{broker="0",from="dc1",partition="0",to="dc1"} 825.0
 ```
 
 ## Running the application in dev mode

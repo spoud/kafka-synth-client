@@ -18,6 +18,11 @@ class TimeServiceTest {
             }
 
             @Override
+            public String rack() {
+                return null;
+            }
+
+            @Override
             public int consumersCount() {
                 return 0;
             }

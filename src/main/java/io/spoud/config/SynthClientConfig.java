@@ -7,6 +7,9 @@ import io.smallrye.config.WithDefault;
 public interface SynthClientConfig {
     String topic();
 
+    @WithDefault("")
+    String rack();
+
     @WithDefault("1")
     int consumersCount();
 

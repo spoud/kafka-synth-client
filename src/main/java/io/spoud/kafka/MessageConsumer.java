@@ -10,11 +10,13 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
+import org.apache.kafka.common.header.Header;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -74,7 +76,13 @@ public class MessageConsumer implements Runnable, AutoCloseable {
                 for (ConsumerRecord<Long, byte[]> message : records) {
                     long produceTime = message.timestamp();
                     long consumeTime = timeService.currentTimeMillis();
-                    metricService.recordLatency(message.topic(), message.partition(), consumeTime - produceTime);
+                    String fromRack = Optional.of(message)
+                            .map(ConsumerRecord::headers)
+                            .map(h -> h.lastHeader(MessageProducer.HEADER_RACK))
+                            .map(Header::value)
+                            .map(String::new)
+                            .orElse("unknown");
+                    metricService.recordLatency(message.topic(), message.partition(), consumeTime - produceTime, fromRack);
                     lastReport.updateAndGet(last -> {
                         if (Duration.between(last, Instant.now()).getSeconds() > 10) {
                             Log.infov("Consumed {0} messages/seconds", counter.getAndSet(0) / 10.0);

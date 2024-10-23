@@ -54,9 +54,9 @@ public class KafkaSynthClientTest {
 
         var metrics = RestAssured.get("/q/metrics").asString();
 
-        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",partition=\"0\",quantile=\"0.5\"}");
-        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",partition=\"0\",quantile=\"0.5\"}");
-        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",partition=\"0\",quantile=\"0.95\"}");
-        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",partition=\"0\",quantile=\"0.99\"}");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",from=\"dc1\",partition=\"0\",to=\"dc1\",quantile=\"0.5\"}");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",from=\"dc1\",partition=\"0\",to=\"dc1\",quantile=\"0.9\"}");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",from=\"dc1\",partition=\"0\",to=\"dc1\",quantile=\"0.95\"}");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",from=\"dc1\",partition=\"0\",to=\"dc1\",quantile=\"0.99\"}");
     }
 }
