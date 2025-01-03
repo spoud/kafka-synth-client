@@ -1,0 +1,30 @@
+== Parameters
+
+You have the possibility to tweak the configuration using environment variables. Below is an overview of some key configuration parameters.
+
+|===
+|Parameter | default | Description
+
+| `KAFKA_BOOTSTRAP_SERVERS`
+| _<mandatory>_
+| Kafka bootstrap servers
+
+| `SYNTH_CLIENT_TOPIC`
+| _<mandatory>_
+| The Kafka topic to produce to and consume from.
+
+| `SYNTH_CLIENT_MESSAGES_MESSAGE_SIZE_BYTES`
+| 8
+| The size of each Kafka message in bytes.
+
+| `SYNTH_CLIENT_MESSAGES_MESSAGES_PER_SECOND`
+| 1
+| The number of messages to produce per second.
+
+| `QUARKUS_HTTP_PORT`
+| 8081
+| The port on which the metrics endpoint will be exposed.
+|===
+
+Furthermore, any environment variable prefixed with `KAFKA_` will be interpreted as a Kafka Producer/Consumer configuration property.
+For example, setting `KAFKA_GROUP_ID` will set the value of the `group.id` consumer property.
