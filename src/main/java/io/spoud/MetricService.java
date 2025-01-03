@@ -14,11 +14,18 @@ import java.util.Map;
 @ApplicationScoped
 public class MetricService {
 
-    public static final String METER_NAME = "synth-client.e2e.latency";
+    public static final String E2E_METER_NAME = "synth-client.e2e.latency";
+    public static final String ACK_METER_NAME = "synth-client.ack.latency";
+
+    private static final String TAG_PARTITION = "partition";
+    private static final String TAG_BROKER = "broker";
+    private static final String TAG_TO_RACK = "toRack";
+    private static final String TAG_FROM_RACK = "fromRack";
 
     private final MeterRegistry meterRegistry;
     private final PartitionRebalancer partitionRebalancer;
-    private final Map<Integer, DistributionSummary> partitionLatencies = new HashMap<>();
+    private final Map<PartitionRackPair, WrappedDistributionSummary> e2eLatencies = new HashMap<>();
+    private final Map<Integer, WrappedDistributionSummary> ackLatenciesByPartition = new HashMap<>();
     private final SynthClientConfig config;
 
     public MetricService(MeterRegistry meterRegistry,
@@ -34,22 +41,64 @@ public class MetricService {
         String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
                 .map(String::valueOf)
                 .orElse("unknown");
-        DistributionSummary e2eLatency = partitionLatencies.computeIfAbsent(partition, (k) -> DistributionSummary
-                .builder(METER_NAME)
+        var key = new PartitionRackPair(partition, fromRack);
+        var e2eLatency = e2eLatencies
+                .computeIfAbsent(key, (k) -> genE2eSummary(partition, broker, fromRack));
+        if (!e2eLatency.broker().equals(broker)) {
+            // broker changed, recreate the distribution summary
+            meterRegistry.remove(e2eLatency.distributionSummary());
+            e2eLatency = genE2eSummary(partition, broker, fromRack);
+            e2eLatencies.put(key, e2eLatency);
+        }
+        e2eLatency.distributionSummary().record(latencyMs);
+    }
+
+    public void recordAckLatency(String topic, int partition, Duration between) {
+        Log.debugv("Ack latency for partition {0}: {1}ms", partition, between.toMillis());
+        String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
+                .map(String::valueOf)
+                .orElse("unknown");
+        var ackLatency = ackLatenciesByPartition.computeIfAbsent(partition, (k) -> genAckSummary(partition, broker));
+        if (!ackLatency.broker().equals(broker)) {
+            // broker changed, recreate the distribution summary
+            meterRegistry.remove(ackLatency.distributionSummary());
+            ackLatency = genAckSummary(partition, broker);
+            ackLatenciesByPartition.put(partition, ackLatency);
+        }
+        ackLatency.distributionSummary().record(between.toMillis());
+    }
+
+    private WrappedDistributionSummary genAckSummary(int partition, String broker) {
+        return new WrappedDistributionSummary(DistributionSummary
+                .builder(ACK_METER_NAME)
                 .baseUnit("ms")
-                .tag("partition", String.valueOf(partition))
-                .tag("broker", broker)
-                .tag("toRack", config.rack())
-                .tag("fromRack", fromRack)
+                .tag(TAG_PARTITION, String.valueOf(partition))
+                .tag(TAG_BROKER, broker)
+                .description("Ack latency of the synthetic client")
+                .minimumExpectedValue(1.0)
+                .maximumExpectedValue(10_000.0)
+                .publishPercentiles(0.5, 0.8, 0.9, 0.95, 0.99)
+                .register(meterRegistry), broker);
+    }
+
+    private WrappedDistributionSummary genE2eSummary(int partition, String broker, String fromRack) {
+        return new WrappedDistributionSummary(DistributionSummary
+                .builder(E2E_METER_NAME)
+                .baseUnit("ms")
+                .tag(TAG_PARTITION, String.valueOf(partition))
+                .tag(TAG_BROKER, broker)
+                .tag(TAG_TO_RACK, config.rack())
+                .tag(TAG_FROM_RACK, fromRack)
                 .description("End-to-end latency of the synthetic client")
                 .minimumExpectedValue(1.0)
                 .maximumExpectedValue(10_000.0)
                 .publishPercentiles(0.5, 0.8, 0.9, 0.95, 0.99)
-                .register(meterRegistry));
-        e2eLatency.record(latencyMs);
+                .register(meterRegistry), broker);
     }
 
-    public void recordAckLatency(String topic, int partition, Duration between) {
-        // TODO metric for ACK time
+    private record WrappedDistributionSummary(DistributionSummary distributionSummary, String broker) {
+    }
+
+    private record PartitionRackPair(int partition, String rack) {
     }
 }
