@@ -6,6 +6,7 @@ import io.quarkus.scheduler.Scheduled;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.spoud.config.SynthClientConfig;
+import jakarta.enterprise.context.ApplicationScoped;
 import org.apache.commons.net.ntp.NTPUDPClient;
 import org.apache.commons.net.ntp.TimeInfo;
 import org.eclipse.microprofile.faulttolerance.Fallback;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicLong;
 
+@ApplicationScoped
 public class TimeService {
     private final AtomicLong clockOffset = new AtomicLong(0);
     private int timeServerIndex = 0;
