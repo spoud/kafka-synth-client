@@ -1,0 +1,20 @@
+// configure EN settings for asciidoc
+include::config.adoc[]
+
+= Kafka Synth Client
+:toc-title: Table of Contents
+:toclevels: 3
+
+:numbered:
+
+<<<
+include::introduction.adoc[]
+
+<<<
+include::getting-started.adoc[]
+
+<<<
+include::parameters.adoc[]
+
+
+

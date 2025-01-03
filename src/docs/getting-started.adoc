@@ -1,0 +1,20 @@
+== Getting started
+
+=== Using docker-compose
+
+Use the docker compose file found at the root of this repository.
+
+Start everything using
+
+```bash
+docker-compose up -d
+```
+
+This will start a kafka broker, the kafka-synth-client and prometheus so you can store visualize the metrics. Prometheus will be available at `http://localhost:9090`. You can try the following queries:
+```promql
+synth_client_e2e_latency_ms
+```
+
+If you want to test against your own kafka cluster, be sure to change the kafka parameters in the docker-compose file. Everything prefixed with `KAFKA_` will be used in the kafka client.
+
+Refer to the chapter <<Parameters>> for more information on the available parameters.
