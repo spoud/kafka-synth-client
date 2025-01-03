@@ -5,6 +5,7 @@ import io.quarkus.logging.Log;
 import io.spoud.config.SynthClientConfig;
 import io.spoud.config.SynthClientConfigMessages;
 import org.assertj.core.data.Offset;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -12,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TimeServiceTest {
 
     @Test
+    @DisplayName("Current time is adjusted by the clock offset")
     void currentTimeMillis() {
         TimeService timeService = new TimeService(new SimpleMeterRegistry(), new SynthClientConfig() {
             @Override

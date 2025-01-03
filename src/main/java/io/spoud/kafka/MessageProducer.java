@@ -38,7 +38,6 @@ public class MessageProducer {
     }
 
     public void send(Long key, byte[] value) {
-        // TODO metric for ACK time
         Instant send = Instant.now();
         var record = new ProducerRecord<>(config.topic(), null, timeService.currentTimeMillis(), key, value);
         record.headers().add(HEADER_RACK, config.rack().getBytes());
