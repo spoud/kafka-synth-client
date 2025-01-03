@@ -3,6 +3,7 @@ package io.spoud;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.logging.Log;
+import io.spoud.config.SynthClientConfig;
 import io.spoud.kafka.PartitionRebalancer;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -18,13 +19,17 @@ public class MetricService {
     private final MeterRegistry meterRegistry;
     private final PartitionRebalancer partitionRebalancer;
     private final Map<Integer, DistributionSummary> partitionLatencies = new HashMap<>();
+    private final SynthClientConfig config;
 
-    public MetricService(MeterRegistry meterRegistry, PartitionRebalancer partitionRebalancer) {
+    public MetricService(MeterRegistry meterRegistry,
+                         PartitionRebalancer partitionRebalancer,
+                         SynthClientConfig config) {
         this.meterRegistry = meterRegistry;
         this.partitionRebalancer = partitionRebalancer;
+        this.config = config;
     }
 
-    synchronized public void recordLatency(String topic, int partition, long latencyMs) {
+    synchronized public void recordLatency(String topic, int partition, long latencyMs, String fromRack) {
         Log.debugv("Latency for partition {0}: {1}ms", partition, latencyMs);
         String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
                 .map(String::valueOf)
@@ -34,6 +39,8 @@ public class MetricService {
                 .baseUnit("ms")
                 .tag("partition", String.valueOf(partition))
                 .tag("broker", broker)
+                .tag("toRack", config.rack())
+                .tag("fromRack", fromRack)
                 .description("End-to-end latency of the synthetic client")
                 .minimumExpectedValue(1.0)
                 .maximumExpectedValue(10_000.0)

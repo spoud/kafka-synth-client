@@ -19,6 +19,8 @@ public class MessageProducer {
     private final SynthClientConfig config;
     private KafkaProducer<Long, byte[]> producer;
 
+    public static final String HEADER_RACK = "rack";
+
     public MessageProducer(KafkaFactory kafkaFactory, SynthClientConfig config,
                            MetricService metricService, TimeService timeService) {
         this.kafkaFactory = kafkaFactory;
@@ -39,6 +41,7 @@ public class MessageProducer {
         // TODO metric for ACK time
         Instant send = Instant.now();
         var record = new ProducerRecord<>(config.topic(), null, timeService.currentTimeMillis(), key, value);
+        record.headers().add(HEADER_RACK, config.rack().getBytes());
         producer.send(record, (metadata, exception) -> {
             if (exception != null) {
                 Log.error("Failed to send message", exception);

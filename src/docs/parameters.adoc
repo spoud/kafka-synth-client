@@ -21,6 +21,10 @@ You have the possibility to tweak the configuration using environment variables.
 | 1
 | The number of messages to produce per second.
 
+| `SYNTH_CLIENT_RACK`
+| <empty string>
+| Some identifier of the environment in which the client is running. For example "eu-west-1a". This is useful for measuring latencies between clients that are running in different environments. Can be left unset if not needed.
+
 | `QUARKUS_HTTP_PORT`
 | 8081
 | The port on which the metrics endpoint will be exposed.

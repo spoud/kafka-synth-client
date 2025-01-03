@@ -15,9 +15,10 @@ and automatically reassigns partitions to brokers to ensure that each broker wil
 The preferred way to configure the client is to use environment variables.
 The following environment variables are specific to the client:
 
-- `MESSAGE_SIZE_BYTES` (default: 8): The size of each Kafka message in bytes.
-- `MESSAGES_PER_SECOND` (default: 1): The number of messages to produce per second.
-- `KAFKA_TOPIC`: The Kafka topic to produce to and consume from.
+- `SYNTH_CLIENT_MESSAGES_MESSAGE_SIZE_BYTES` (default: 8): The size of each Kafka message in bytes.
+- `SYNTH_CLIENT_MESSAGES_MESSAGES_PER_SECOND` (default: 1): The number of messages to produce per second.
+- `SYNTH_CLIENT_TOPIC`: The Kafka topic to produce to and consume from.
+- `SYNTH_CLIENT_RACK`: Some identifier of the environment in which the client is running. For example "eu-west-1a". This is useful for measuring latencies between clients that are running in different environments. Can be left unset if this is not relevant.
 - `QUARKUS_HTTP_PORT` (default: 8081): The port on which the metrics endpoint will be exposed.
 
 Additionally, you will need to provide configuration for connecting to Kafka. This is also provided via environment variables.
@@ -43,13 +44,13 @@ $ curl localhost:8081/q/metrics -s | grep synth_client_e2e
 synth_client_e2e_latency_ms_max{broker="0"} 365.0
 # TYPE synth_client_e2e_latency_ms summary
 # HELP synth_client_e2e_latency_ms End-to-end latency of the synthetic client
-synth_client_e2e_latency_ms{broker="0",quantile="0.5"} 7.125
-synth_client_e2e_latency_ms{broker="0",quantile="0.8"} 11.375
-synth_client_e2e_latency_ms{broker="0",quantile="0.9"} 12.375
-synth_client_e2e_latency_ms{broker="0",quantile="0.95"} 16.875
-synth_client_e2e_latency_ms{broker="0",quantile="0.99"} 367.875
-synth_client_e2e_latency_ms_count{broker="0"} 60.0
-synth_client_e2e_latency_ms_sum{broker="0"} 825.0
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.5"} 7.125
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.8"} 11.375
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.9"} 12.375
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.95"} 16.875
+synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.99"} 367.875
+synth_client_e2e_latency_ms_count{broker="0",from="dc1",partition="0",to="dc1"} 60.0
+synth_client_e2e_latency_ms_sum{broker="0",from="dc1",partition="0",to="dc1"} 825.0
 ```
 
 ## Running the application in dev mode
