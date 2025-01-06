@@ -82,6 +82,7 @@ public class MessageConsumer implements Runnable, AutoCloseable {
                             .map(Header::value)
                             .map(String::new)
                             .orElse("unknown");
+                    metricService.recordConsumptionTime();
                     metricService.recordLatency(message.topic(), message.partition(), consumeTime - produceTime, fromRack);
                     lastReport.updateAndGet(last -> {
                         if (Duration.between(last, Instant.now()).getSeconds() > 10) {
