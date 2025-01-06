@@ -66,6 +66,23 @@ public class KafkaSynthClientTest {
     }
 
     @Test
+    @DisplayName("Ack latency metrics are recorded")
+    public void testAckLatencyRecorded() {
+        kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
+                .fromTopics(config.topic(), 3)
+                .awaitCompletion(Duration.ofSeconds(5));
+
+        var metrics = RestAssured.get("/q/metrics").asString();
+
+        assertThat(metrics).contains("synth_client_ack_latency_ms{broker=\"0\",partition=\"0\",rack=\"dc1\",quantile=\"0.5\"}");
+        assertThat(metrics).contains("synth_client_ack_latency_ms{broker=\"0\",partition=\"0\",rack=\"dc1\",quantile=\"0.9\"}");
+        assertThat(metrics).contains("synth_client_ack_latency_ms{broker=\"0\",partition=\"0\",rack=\"dc1\",quantile=\"0.95\"}");
+        assertThat(metrics).contains("synth_client_ack_latency_ms{broker=\"0\",partition=\"0\",rack=\"dc1\",quantile=\"0.99\"}");
+
+        lifecycle.shutdown();
+    }
+
+    @Test
     @DisplayName("Producer error rate is recorded")
     public void testProducerErrorRateRecorded() {
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {

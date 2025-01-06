@@ -115,6 +115,7 @@ public class MetricService {
                 .baseUnit("ms")
                 .tag(TAG_PARTITION, String.valueOf(partition))
                 .tag(TAG_BROKER, broker)
+                .tag(TAG_RACK, config.rack())
                 .description("Ack latency of the synthetic client")
                 .minimumExpectedValue(1.0)
                 .maximumExpectedValue(10_000.0)
