@@ -156,15 +156,14 @@ public class PartitionRebalancer {
         cluster.nodes().whenComplete((nodes, throwable) -> {
             if (throwable != null) {
                 Log.error("Failed to get cluster nodes", throwable);
-                return;
+                throw new RuntimeException("Failed to get cluster nodes", throwable);
             }
             Log.info("Cluster has " + nodes.size() + " nodes");
             // make sure that the topic has at least as many partitions as there are brokers
             var description = adminClient.describeTopics(List.of(config.topic()));
             description.allTopicNames().whenComplete((topics, throwable1) -> {
                 if (throwable1 != null) {
-                    Log.error("Failed to get topic names", throwable1);
-                    return;
+                    throw new RuntimeException("Failed to get topic names", throwable1);
                 }
                 var topicDescr = topics.get(config.topic());
                 Log.infov("Topic {0} has {1} partitions", config.topic(), topicDescr.partitions().size());
@@ -174,7 +173,7 @@ public class PartitionRebalancer {
                     try {
                         adminClient.createPartitions(Map.of(config.topic(), NewPartitions.increaseTo(nodes.size()))).all().getNow(null);
                     } catch (Exception e) {
-                        Log.error("Failed to create partitions", e);
+                        throw new RuntimeException("Failed to create partitions", e);
                     }
                 }
 

@@ -47,6 +47,7 @@ services:
       - 8081:8081
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=redpanda-0:9092
-      - KAFKA_TOPIC=kafka-synth-client-test
+      - SYNTH_CLIENT_TOPIC=kafka-synth-client-test
+      - SYNTH_CLIENT_RACK=rack1
     depends_on:
       - redpanda-0

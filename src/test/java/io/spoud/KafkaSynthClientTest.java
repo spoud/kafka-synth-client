@@ -81,4 +81,24 @@ public class KafkaSynthClientTest {
 
         lifecycle.shutdown();
     }
+
+    @Test
+    @DisplayName("Producer error rate is recorded")
+    public void testProducerErrorRateRecorded() {
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            var metrics = RestAssured.get("/q/metrics").asString();
+            assertThat(metrics).contains("synth_client_producer_error_rate{rack=\"dc1\"}");
+            // -1 signifies that the metric could not be retrieved
+            assertThat(metrics).doesNotContain("synth_client_producer_error_rate{rack=\"dc1\"} -1");
+        });
+    }
+
+    @Test
+    @DisplayName("Time since last consumption recorded")
+    public void testTimeSinceLastConsumptionRecorded() {
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            var metrics = RestAssured.get("/q/metrics").asString();
+            assertThat(metrics).contains("synth_client_time_since_last_consumption_seconds{rack=\"dc1\"}");
+        });
+    }
 }

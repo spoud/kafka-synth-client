@@ -2,20 +2,31 @@ package io.spoud;
 
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.TimeGauge;
 import io.quarkus.logging.Log;
 import io.spoud.config.SynthClientConfig;
 import io.spoud.kafka.PartitionRebalancer;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @ApplicationScoped
 public class MetricService {
 
     public static final String E2E_METER_NAME = "synth-client.e2e.latency";
     public static final String ACK_METER_NAME = "synth-client.ack.latency";
+    public static final String PRODUCE_ERROR_RATE_METER_NAME = "synth-client.producer.error-rate";
+    public static final String TIME_SINCE_LAST_CONSUMPTION_METER_NAME = "synth-client.time-since-last-consumption";
 
     private static final String TAG_PARTITION = "partition";
     private static final String TAG_BROKER = "broker";
@@ -28,13 +39,42 @@ public class MetricService {
     private final Map<PartitionRackPair, WrappedDistributionSummary> e2eLatencies = new HashMap<>();
     private final Map<Integer, WrappedDistributionSummary> ackLatenciesByPartition = new HashMap<>();
     private final SynthClientConfig config;
+    private final String kafkaClientId;
+    private final AtomicReference<Instant> lastConsumptionTime = new AtomicReference<>(Instant.now());
 
     public MetricService(MeterRegistry meterRegistry,
                          PartitionRebalancer partitionRebalancer,
-                         SynthClientConfig config) {
+                         SynthClientConfig config,
+                         @ConfigProperty(name = "kafka.client.id") String kafkaClientId) {
         this.meterRegistry = meterRegistry;
         this.partitionRebalancer = partitionRebalancer;
         this.config = config;
+        this.kafkaClientId = kafkaClientId;
+        meterRegistry.gauge(PRODUCE_ERROR_RATE_METER_NAME, Tags.of(TAG_RACK, config.rack()), this, MetricService::getProduceErrorRate);
+        TimeGauge.builder(TIME_SINCE_LAST_CONSUMPTION_METER_NAME, this, TimeUnit.MILLISECONDS,
+                        MetricService::getMillisecondsSinceLastConsumption)
+                .tag(TAG_RACK, config.rack())
+                .register(meterRegistry);
+    }
+
+    public double getProduceErrorRate() {
+        try {
+            String mbeanName = String.format("kafka.producer:client-id=%s,type=producer-metrics", kafkaClientId);
+            ObjectName objectName = new ObjectName(mbeanName);
+            MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+            return (double) mBeanServer.getAttribute(objectName, "record-error-rate");
+        } catch (Exception e) {
+            Log.error("Error retrieving error rate", e);
+            return -1;
+        }
+    }
+
+    public long getMillisecondsSinceLastConsumption() {
+        return Duration.between(lastConsumptionTime.get(), Instant.now()).toMillis();
+    }
+
+    public void recordConsumptionTime() {
+        lastConsumptionTime.updateAndGet(inst -> Instant.now().isAfter(inst) ? Instant.now() : inst);
     }
 
     synchronized public void recordLatency(String topic, int partition, long latencyMs, String fromRack) {

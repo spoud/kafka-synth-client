@@ -18,3 +18,69 @@ synth_client_e2e_latency_ms
 If you want to test against your own kafka cluster, be sure to change the kafka parameters in the docker-compose file. Everything prefixed with `KAFKA_` will be used in the kafka client.
 
 Refer to the chapter <<Parameters>> for more information on the available parameters.
+
+=== Available Metrics
+
+The synth client exposes the following metrics in prometheus format (on the `/q/metrics` endpoint):
+
+==== End to end produce/consume latency in milliseconds
+
+```
+# HELP synth_client_e2e_latency_ms End-to-end latency of the synthetic client
+# TYPE synth_client_e2e_latency_ms summary
+synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.5",} 6.125
+synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.8",} 7.125
+synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.9",} 9.375
+synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.95",} 9.375
+synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.99",} 10.375
+```
+
+This latency describes the time it took for a produced message to be consumed. The latency is measured in milliseconds.
+The synth client reports the median, 80th, 90th, 95th, and 99th percentile of the latencies. These metrics are handy if
+you have a service level objective (SLO) for the end-to-end latency of your Kafka messages (e.g. 95% of messages should be consumable within 30ms of being produced).
+
+==== Acknowledgement latency in milliseconds
+
+```
+# HELP synth_client_ack_latency_ms Ack latency of the synthetic client
+# TYPE synth_client_ack_latency_ms summary
+synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.5",} 4.1875
+synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.8",} 5.1875
+synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.9",} 6.1875
+synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.95",} 7.1875
+synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.99",} 9.4375
+```
+
+This latency describes the time it took for a produced message to be acknowledged by the broker. The latency is measured in milliseconds.
+The synth client reports the median, 80th, 90th, 95th, and 99th percentile of the latencies. These metrics are handy if
+you would like to know how long it takes for your message to be acknowledged by the broker.
+This is especially interesting if you configure the producer with `acks=all` (you can do this in the synth client by setting the `KAFKA_ACKS` environment variable to `all`).,
+as this will only acknowledge the message once it has been received by all replicas.
+In this case, we are effectively monitoring the time it takes to replicate the message across all replicas.
+The `rack` label indicates the "rack" or environment in which the client is running.
+This label is useful for distinguishing between latencies in different environments.
+
+==== Time since last message in seconds
+
+```
+# HELP synth_client_time_since_last_consumption_seconds
+# TYPE synth_client_time_since_last_consumption_seconds gauge
+synth_client_time_since_last_consumption_seconds{rack="rack1",} 0.175
+```
+
+This metric describes the amount of seconds since the last message was consumed by the client.
+Since the client is producing messages at a constant rate (at least one message per second),
+a value that is much higher than 1 second indicates that there are issues either with the production or consumption of messages.
+This metric is a good candidate for alerting, as it can indicate that the Kafka cluster is not functioning as expected or unreachable.
+
+==== Producer error rate per second
+
+```
+# HELP synth_client_producer_error_rate
+# TYPE synth_client_producer_error_rate gauge
+synth_client_producer_error_rate{rack="rack1",} 0.0
+```
+
+The average per-second number of record sends that resulted in errors. An increase in this metric can indicate issues
+with reaching the Kafka cluster or issues with the Kafka cluster itself.
+This is another good candidate for alerting.
