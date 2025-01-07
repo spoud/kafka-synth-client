@@ -15,10 +15,13 @@ import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class MetricService {
@@ -59,12 +62,16 @@ public class MetricService {
 
     public double getProduceErrorRate() {
         try {
-            String mbeanName = String.format("kafka.producer:client-id=%s,type=producer-metrics", kafkaClientId);
+            String mbeanName = String.format("kafka.producer:client-id=%s,type=producer-mxetrics", kafkaClientId);
             ObjectName objectName = new ObjectName(mbeanName);
             MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
             return (double) mBeanServer.getAttribute(objectName, "record-error-rate");
         } catch (Exception e) {
             Log.error("Error retrieving error rate", e);
+            Log.debugv("Available MBeans: {0}",
+                    getAvailableMBeanNames().stream()
+                            .map(ObjectName::toString)
+                            .collect(Collectors.joining("\n\t- ", "\n", "")));
             return -1;
         }
     }
@@ -136,6 +143,15 @@ public class MetricService {
                 .maximumExpectedValue(10_000.0)
                 .publishPercentiles(0.5, 0.8, 0.9, 0.95, 0.99)
                 .register(meterRegistry), broker);
+    }
+
+    private Collection<ObjectName> getAvailableMBeanNames() {
+        try {
+            return ManagementFactory.getPlatformMBeanServer().queryNames(null, null);
+        } catch (Exception e) {
+            Log.warn("Failed to retrieve MBean names", e);
+            return List.of();
+        }
     }
 
     private record WrappedDistributionSummary(DistributionSummary distributionSummary, String broker) {
