@@ -28,7 +28,14 @@ jobs:
       - name: Run Unit Tests
         run: mvn clean test
       - name: Build Container Image
-        run: mvn package -DskipTests -Dquarkus.jib.base-jvm-image=eclipse-temurin:21-jre-jammy -Dquarkus.container-image.name=$APP_NAME -Dquarkus.container-image.push=false -Dquarkus.container-image.build=true -Dquarkus.container-image.tag=${{ github.sha }} -Dquarkus.container-image.group=ghcr.io/${{ github.repository_owner }}
+        run: |
+          IMAGE_NAME=${{ github.repository_owner }}/$APP_NAME
+          IMAGE_ID=ghcr.io/$IMAGE_NAME
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          VERSION=${{ github.sha }}
+          
+          mvn package -DskipTests
+          docker build -t $IMAGE_ID:$VERSION . -f src/main/docker/Dockerfile.jvm
       - name: Push Image
         run: |
           # Log in to registry
