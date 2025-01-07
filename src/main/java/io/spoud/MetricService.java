@@ -62,7 +62,7 @@ public class MetricService {
 
     public double getProduceErrorRate() {
         try {
-            String mbeanName = String.format("kafka.producer:client-id=%s,type=producer-mxetrics", kafkaClientId);
+            String mbeanName = String.format("kafka.producer:client-id=%s,type=producer-metrics", kafkaClientId);
             ObjectName objectName = new ObjectName(mbeanName);
             MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
             return (double) mBeanServer.getAttribute(objectName, "record-error-rate");
