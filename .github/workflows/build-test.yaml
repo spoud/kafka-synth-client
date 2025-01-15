@@ -32,7 +32,7 @@ jobs:
           IMAGE_NAME=${{ github.repository_owner }}/$APP_NAME
           IMAGE_ID=ghcr.io/$IMAGE_NAME
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          VERSION=${{ github.ref }}
+          VERSION=${{ github.ref_name }}
           
           mvn package -DskipTests
           docker build -t $IMAGE_ID:$VERSION . -f src/main/docker/Dockerfile.jvm
@@ -47,7 +47,7 @@ jobs:
 
           # Change all uppercase to lowercase
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          VERSION=${{ github.ref }}
+          VERSION=${{ github.ref_name }}
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
           docker push $IMAGE_ID:$VERSION
