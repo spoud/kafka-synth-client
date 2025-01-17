@@ -1,0 +1,105 @@
+# This file illustrates how to use the synth client with a Strimzi cluster.
+# It defines a kafka user for the synth client, a topic to write to, and a deployment of the client itself.
+# The metrics are exposed on port 8081 (this port is also exposed via a service).
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  annotations:
+    spoud.io/kcc-context.application: synth-client
+  labels:
+    strimzi.io/cluster: my-cluster
+  name: synth-client
+  namespace: kafka
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    acls:
+    - host: '*'
+      operations:
+      - Describe
+      - Write
+      - Read
+      - Alter
+      resource:
+        name: synth-client-topic
+        patternType: literal
+        type: topic
+    - host: '*'
+      operations:
+      - Read
+      resource:
+        name: synth-client
+        patternType: literal
+        type: group
+    type: simple
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  annotations:
+    spoud.io/kcc-context.application: synth-client
+  labels:
+    strimzi.io/cluster: my-cluster
+  name: synth-client-topic
+  namespace: kafka
+spec:
+  config:
+    retention.ms: 86400000
+  partitions: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: synth-client
+  name: synth-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: synth-client
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: synth-client
+    spec:
+      containers:
+      - image: ghcr.io/spoud/kafka-synth-client:v1.0.1
+        name: synth
+        resources: {}
+        ports:
+        - containerPort: 8081
+          name: prometheus
+        env:
+        - name: SYNTH_CLIENT_TOPIC
+          value: synth-client-topic
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: my-cluster-kafka-bootstrap:9094
+        - name: KAFKA_GROUP_ID
+          value: synth-client
+        - name: KAFKA_SASL_MECHANISM
+          value: SCRAM-SHA-512
+        - name: KAFKA_SASL_JAAS_CONFIG
+          valueFrom:
+            secretKeyRef:
+              name: synth-client
+              key: sasl.jaas.config
+        # don't forget to adjust this to SASL_SSL if you are using a TLS listener (also remember to mount the truststore in this case)
+        - name: KAFKA_SECURITY_PROTOCOL
+          value: SASL_PLAINTEXT
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: synth-client
+  name: synth-client
+spec:
+  ports:
+  - port: 8081
+    protocol: TCP
+    targetPort: 8081
+  selector:
+    app: synth-client
