@@ -19,6 +19,16 @@ If you want to test against your own kafka cluster, be sure to change the kafka 
 
 Refer to the chapter <<Parameters>> for more information on the available parameters.
 
+=== Required ACLs
+
+In order to work properly, the client's user needs to have ACL permissions to do the following operations:
+
+- Describe, Read, Write, Alter the configured topic
+- Read the configured consumer group
+
+For information on how to configure the consumer group and the topic, see the Parameters section.
+An example for setting this up for a Strimzi cluster is available in the `examples/` folder.
+
 === Available Metrics
 
 The synth client exposes the following metrics in prometheus format (on the `/q/metrics` endpoint):

@@ -35,7 +35,13 @@ For a list of Kafka configuration options, see the following links:
 
 Note that key/value serializers and deserializers are already configured and should not be overridden.
 
-With the client running, you can view the metrics at `http://localhost:8081/q/metrics`:
+In order to work properly, the client's Kafka user needs to have ACL permissions to do the following operations:
+
+- Describe, Read, Write, Alter the configured topic
+- Read the configured consumer group
+
+An example for setting this up for a Strimzi cluster is available in the `examples/` folder.
+Now, with the client running, you can view the metrics at `http://localhost:8081/q/metrics`:
 
 ```
 $ curl localhost:8081/q/metrics -s | grep synth_client_e2e
