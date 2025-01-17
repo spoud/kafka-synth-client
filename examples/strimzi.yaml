@@ -4,8 +4,6 @@
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaUser
 metadata:
-  annotations:
-    spoud.io/kcc-context.application: synth-client
   labels:
     strimzi.io/cluster: my-cluster
   name: synth-client
@@ -37,8 +35,6 @@ spec:
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
-  annotations:
-    spoud.io/kcc-context.application: synth-client
   labels:
     strimzi.io/cluster: my-cluster
   name: synth-client-topic
