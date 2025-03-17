@@ -44,6 +44,7 @@ public class MetricService {
     private final SynthClientConfig config;
     private final String kafkaClientId;
     private final AtomicReference<Instant> lastConsumptionTime = new AtomicReference<>(Instant.now());
+    private final Map<Integer, Long> messagesConsumedPerPartition = new HashMap<>();
 
     public MetricService(MeterRegistry meterRegistry,
                          PartitionRebalancer partitionRebalancer,
@@ -89,6 +90,13 @@ public class MetricService {
         String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
                 .map(String::valueOf)
                 .orElse("unknown");
+        long recordsSeen = messagesConsumedPerPartition.computeIfAbsent(partition, (k) -> (long)0);
+        messagesConsumedPerPartition.put(partition, Math.max(1, recordsSeen + 1));
+        if (recordsSeen < config.messages().ignoreFirstNMessages()) {
+            Log.debugv("Ignoring latency for partition {0} as we have seen only {1} / {2} records",
+                    partition, recordsSeen, config.messages().ignoreFirstNMessages());
+            return;
+        }
         var key = new PartitionRackPair(partition, fromRack);
         var e2eLatency = e2eLatencies
                 .computeIfAbsent(key, (k) -> genE2eSummary(partition, broker, fromRack));
