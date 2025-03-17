@@ -62,7 +62,7 @@ public class KafkaSynthClient {
                             if (t1 != null) {
                                 // if there is auto.create concurrently happening, we might get a TopicExistsException
                                 if(t1 instanceof TopicExistsException) {
-                                    waitForToicCreated.set(false);
+                                    waitForTopicCreated.set(false);
                                     Log.infof("Topic already exists %s", config.topic());
                                 } else {
                                     throw new RuntimeException("Failed to create topic", t1);
