@@ -86,7 +86,7 @@ public class KafkaSynthClient {
     // TODO this sounds sketchy, we have no guarantee that the scheduler will run every seconds
     @Scheduled(every = "1s")
     void produceMessage() {
-        if (waitForToicCreated.get()) {
+        if (waitForTopicCreated.get()) {
             return;
         }
         for (int i = 0; i < messagesPerSecond; i++) {
