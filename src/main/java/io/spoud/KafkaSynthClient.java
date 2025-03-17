@@ -74,7 +74,7 @@ public class KafkaSynthClient {
                         });
                     });
                 } else {
-                    waitForToicCreated.set(false);
+                    waitForTopicCreated.set(false);
                     Log.infof("Topic already exists %s", config.topic());
                 }
             });
