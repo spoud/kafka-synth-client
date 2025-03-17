@@ -69,7 +69,7 @@ public class KafkaSynthClient {
                                 }
                             } else {
                                 Log.infof("Topic created %s", config.topic());
-                                waitForToicCreated.set(false);
+                                waitForTopicCreated.set(false);
                             }
                         });
                     });
