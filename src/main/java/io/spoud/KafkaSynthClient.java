@@ -29,7 +29,7 @@ public class KafkaSynthClient {
     private final int messagesPerSecond;
     private final AdminClient adminClient;
     private final SynthClientConfig config;
-    private AtomicBoolean waitForToicCreated = new AtomicBoolean(true);
+    private AtomicBoolean waitForTopicCreated = new AtomicBoolean(true);
 
     public KafkaSynthClient(
             SynthClientConfig config,
