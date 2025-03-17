@@ -17,4 +17,7 @@ public interface SynthClientConfig {
     String timeServers();
 
     SynthClientConfigMessages messages();
+
+    @WithDefault("true")
+    boolean autoCreateTopic();
 }

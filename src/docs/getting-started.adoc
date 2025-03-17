@@ -19,6 +19,16 @@ If you want to test against your own kafka cluster, be sure to change the kafka 
 
 Refer to the chapter <<Parameters>> for more information on the available parameters.
 
+=== Required Topic
+
+The synth-client requires a topic to produce and consume messages from configured by `synth-client.topic` property.
+The topic needs to have the number of partitions equal to the number of brokers in the Kafka cluster.
+
+As data is random we recommend short retention times for the topic.
+
+If you want the client to automatically create the topic with the correct number of partitions, set the `synth-client.auto-create-topic` property to `true`.
+For this to work the client needs `Create` permissions on the configured topic.
+
 === Required ACLs
 
 In order to work properly, the client's user needs to have ACL permissions to do the following operations:
