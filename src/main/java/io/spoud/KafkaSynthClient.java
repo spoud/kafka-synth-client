@@ -79,7 +79,7 @@ public class KafkaSynthClient {
                 }
             });
         } else {
-            waitForToicCreated.set(false);
+            waitForTopicCreated.set(false);
         }
     }
 
