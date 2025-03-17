@@ -40,6 +40,11 @@ class TimeServiceTest {
             public SynthClientConfigMessages messages() {
                 return null;
             }
+
+            @Override
+            public boolean autoCreateTopic() {
+                return false;
+            }
         });
 
         timeService.updateClockOffset(); // make sure that this even works without exceptions

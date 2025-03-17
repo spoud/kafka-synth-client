@@ -51,6 +51,12 @@
             <artifactId>quarkus-container-image-jib</artifactId>
         </dependency>
         <dependency>
+            <!-- needed for dev-mode -->
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-messaging-kafka</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
             <version>3.9.0</version>
