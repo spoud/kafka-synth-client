@@ -10,6 +10,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.LongDeserializer;
@@ -49,12 +50,10 @@ public class KafkaFactory {
     Map<String, Object> getKafkaConfig(Set<String> keys) {
         Map<String, Object> copy = new HashMap<>();
         for (Map.Entry<String, String> entry : config.entrySet()) {
-            if (keys.contains(entry.getKey())) {
+            if (keys.contains(entry.getKey()) || entry.getKey().startsWith(AbstractConfig.CONFIG_PROVIDERS_CONFIG)) {
                 copy.put(entry.getKey(), entry.getValue());
             }
         }
         return copy;
     }
-
-
 }
