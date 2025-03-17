@@ -32,3 +32,9 @@ You have the possibility to tweak the configuration using environment variables.
 
 Furthermore, any environment variable prefixed with `KAFKA_` will be interpreted as a Kafka Producer/Consumer configuration property.
 For example, setting `KAFKA_GROUP_ID` will set the value of the `group.id` consumer property.
+
+`KAFKA_CONFIG_PROVIDERS` are supported like `file` or `env`. For example, setting `KAFKA_CONFIG_PROVIDERS=file` will load the configuration from a file.
+`KAFKA_CONFIG_PROVIDERS_FILE_CLASS` will be used to define the provider class. For example, setting `KAFKA_CONFIG_PROVIDERS_FILE_CLASS=org.apache.kafka.common.config.provider.FileConfigProvider` will load the configuration from a file.
+
+Be aware that e.g. `${file:/path/to/file}` needs to be escaped in the environment variable. For example, `KAFKA_CONFIG_PROVIDERS_FILE_PATH=\${file:/path/to/file}` otherwise quarkus will try to resolve it as variable and you will see `Error injecting java.util.Map<java.lang.String, java.lang.String> io.spoud.kafka.KafkaFactory.config`.
+
