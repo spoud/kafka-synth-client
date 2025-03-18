@@ -92,7 +92,7 @@ public class PartitionRebalancer {
                 }
             }
         } catch (Exception e) {
-            Log.debug("Failed to get racks of partition leaders.", e);
+            Log.warn("Failed to get racks of partition leaders.", e);
         }
     }
 
