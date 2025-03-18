@@ -13,6 +13,7 @@ import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.ConfigResource;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
@@ -25,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class PartitionRebalancer {
@@ -40,6 +43,7 @@ public class PartitionRebalancer {
 
     boolean refreshPartitionsEnabled = true;
     Map<Integer, List<Integer>> partitionsByBroker = new ConcurrentHashMap<>();
+    Map<Integer, String> rackByPartition = new ConcurrentHashMap<>();
 
     NewPartitionReassignment genReassignment(Node leader, int replicationFactor, Collection<Node> nodes) {
         var replicaCandidates = nodes.stream()
@@ -66,7 +70,30 @@ public class PartitionRebalancer {
         }
 
         return Optional.empty();
+    }
 
+    public String getRackOfPartitionLeader(int partition) {
+        return rackByPartition.getOrDefault(partition, "unknown");
+    }
+
+    private void recalculateRacksByPartition() {
+        try {
+            var nodeRacks = adminClient.describeCluster()
+                    .nodes()
+                    .get()
+                    .stream()
+                    .collect(Collectors.toMap(Node::id, Node::rack));
+            for (var entry : partitionsByBroker.entrySet()) {
+                var broker = entry.getKey();
+                var partitions = entry.getValue();
+                var rack = nodeRacks.getOrDefault(broker, "unknown");
+                for (var partition : partitions) {
+                    rackByPartition.put(partition, rack);
+                }
+            }
+        } catch (Exception e) {
+            Log.warn("Failed to get racks of partition leaders.", e);
+        }
     }
 
     int getTopicReplicationFactor(TopicDescription topicDescription) {
@@ -179,6 +206,7 @@ public class PartitionRebalancer {
 
                 // make sure that each broker is a leader for at least one partition
                 reassignPartitionsToBrokers(topicDescr, nodes);
+                recalculateRacksByPartition();
             });
         });
     }

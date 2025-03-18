@@ -35,6 +35,7 @@ public class MetricService {
     private static final String TAG_BROKER = "broker";
     private static final String TAG_TO_RACK = "toRack";
     private static final String TAG_FROM_RACK = "fromRack";
+    private static final String TAG_BROKER_RACK = "viaBrokerRack";
     private static final String TAG_RACK = "rack";
 
     private final MeterRegistry meterRegistry;
@@ -90,6 +91,7 @@ public class MetricService {
         String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
                 .map(String::valueOf)
                 .orElse("unknown");
+        String partitionLeaderRack = partitionRebalancer.getRackOfPartitionLeader(partition);
         long recordsSeen = messagesConsumedPerPartition.computeIfAbsent(partition, (k) -> (long)0);
         messagesConsumedPerPartition.put(partition, Math.max(1, recordsSeen + 1));
         if (recordsSeen < config.messages().ignoreFirstNMessages()) {
@@ -99,11 +101,11 @@ public class MetricService {
         }
         var key = new PartitionRackPair(partition, fromRack);
         var e2eLatency = e2eLatencies
-                .computeIfAbsent(key, (k) -> genE2eSummary(partition, broker, fromRack));
+                .computeIfAbsent(key, (k) -> genE2eSummary(partition, broker, fromRack, partitionLeaderRack));
         if (!e2eLatency.broker().equals(broker)) {
             // broker changed, recreate the distribution summary
             meterRegistry.remove(e2eLatency.distributionSummary());
-            e2eLatency = genE2eSummary(partition, broker, fromRack);
+            e2eLatency = genE2eSummary(partition, broker, fromRack, partitionLeaderRack);
             e2eLatencies.put(key, e2eLatency);
         }
         e2eLatency.distributionSummary().record(latencyMs);
@@ -114,23 +116,25 @@ public class MetricService {
         String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
                 .map(String::valueOf)
                 .orElse("unknown");
-        var ackLatency = ackLatenciesByPartition.computeIfAbsent(partition, (k) -> genAckSummary(partition, broker));
+        String partitionLeaderRack = partitionRebalancer.getRackOfPartitionLeader(partition);
+        var ackLatency = ackLatenciesByPartition.computeIfAbsent(partition, (k) -> genAckSummary(partition, broker, partitionLeaderRack));
         if (!ackLatency.broker().equals(broker)) {
             // broker changed, recreate the distribution summary
             meterRegistry.remove(ackLatency.distributionSummary());
-            ackLatency = genAckSummary(partition, broker);
+            ackLatency = genAckSummary(partition, broker, partitionLeaderRack);
             ackLatenciesByPartition.put(partition, ackLatency);
         }
         ackLatency.distributionSummary().record(between.toMillis());
     }
 
-    private WrappedDistributionSummary genAckSummary(int partition, String broker) {
+    private WrappedDistributionSummary genAckSummary(int partition, String broker, String brokerRack) {
         return new WrappedDistributionSummary(DistributionSummary
                 .builder(ACK_METER_NAME)
                 .baseUnit("ms")
                 .tag(TAG_PARTITION, String.valueOf(partition))
                 .tag(TAG_BROKER, broker)
                 .tag(TAG_RACK, config.rack())
+                .tag(TAG_BROKER_RACK, brokerRack)
                 .description("Ack latency of the synthetic client")
                 .minimumExpectedValue(1.0)
                 .maximumExpectedValue(10_000.0)
@@ -138,7 +142,7 @@ public class MetricService {
                 .register(meterRegistry), broker);
     }
 
-    private WrappedDistributionSummary genE2eSummary(int partition, String broker, String fromRack) {
+    private WrappedDistributionSummary genE2eSummary(int partition, String broker, String fromRack, String brokerRack) {
         return new WrappedDistributionSummary(DistributionSummary
                 .builder(E2E_METER_NAME)
                 .baseUnit("ms")
@@ -146,6 +150,7 @@ public class MetricService {
                 .tag(TAG_BROKER, broker)
                 .tag(TAG_TO_RACK, config.rack())
                 .tag(TAG_FROM_RACK, fromRack)
+                .tag(TAG_BROKER_RACK, brokerRack)
                 .description("End-to-end latency of the synthetic client")
                 .minimumExpectedValue(1.0)
                 .maximumExpectedValue(10_000.0)

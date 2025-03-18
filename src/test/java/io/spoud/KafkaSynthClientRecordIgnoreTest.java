@@ -40,16 +40,16 @@ public class KafkaSynthClientRecordIgnoreTest {
 
         var metrics = RestAssured.get("/q/metrics").asString();
 
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",quantile=\"0.5\"}");
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",quantile=\"0.9\"}");
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",quantile=\"0.95\"}");
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",quantile=\"0.99\"}");
+        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}");
+        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",viaBrokerRack=\"unknown\",quantile=\"0.9\"}");
+        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",viaBrokerRack=\"unknown\",quantile=\"0.95\"}");
+        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",viaBrokerRack=\"unknown\",quantile=\"0.99\"}");
 
         // ...but eventually they should appear
         await().atMost(Duration.ofMillis(2000))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(() ->
-                        assertThat(RestAssured.get("/q/metrics").asString()).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",quantile=\"0.5\"}")
+                        assertThat(RestAssured.get("/q/metrics").asString()).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}")
                 );
 
         lifecycle.shutdown();
