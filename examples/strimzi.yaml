@@ -27,8 +27,8 @@ spec:
       operations:
       - Read
       resource:
-        name: synth-client
-        patternType: literal
+        name: kafka-synth-client-
+        patternType: prefix
         type: group
     type: simple
 ---
@@ -73,8 +73,6 @@ spec:
           value: synth-client-topic
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: my-cluster-kafka-bootstrap:9094
-        - name: KAFKA_GROUP_ID
-          value: synth-client
         - name: KAFKA_SASL_MECHANISM
           value: SCRAM-SHA-512
         - name: KAFKA_SASL_JAAS_CONFIG

@@ -19,7 +19,7 @@ The following environment variables are specific to the client:
 - `SYNTH_CLIENT_MESSAGES_MESSAGES_PER_SECOND` (default: 1): The number of messages to produce per second.
 - `SYNTH_CLIENT_MESSAGES_MESSAGES_IGNORE_FIRST_N_MESSAGES` (default: 1): The number of messages (per partition) to ignore before starting to measure latencies. This is useful for avoiding adding noise to the metrics when the consumer group is being rebalanced. The default value should be sufficient.
 - `SYNTH_CLIENT_TOPIC`: The Kafka topic to produce to and consume from.
-- `SYNTH_CLIENT_RACK`: Some identifier of the environment in which the client is running. For example "eu-west-1a". This is useful for measuring latencies between clients that are running in different environments. Can be left unset if this is not relevant.
+- `SYNTH_CLIENT_RACK`: Some identifier of the environment in which the client is running. For example "eu-west-1a". This is useful for measuring latencies between clients that are running in different environments. Can be left unset if this is not relevant. If you have multiple racks, then be sure to assign a unique consumer group ID to each rack.
 - `QUARKUS_HTTP_PORT` (default: 8081): The port on which the metrics endpoint will be exposed.
 
 Additionally, you will need to provide configuration for connecting to Kafka. This is also provided via environment variables.
