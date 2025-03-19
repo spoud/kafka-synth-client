@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -42,8 +44,13 @@ public class PartitionRebalancer {
     MessageProducer producer;
 
     boolean refreshPartitionsEnabled = true;
+    AtomicBoolean initialRefreshDone = new AtomicBoolean(false);
     Map<Integer, List<Integer>> partitionsByBroker = new ConcurrentHashMap<>();
     Map<Integer, String> rackByPartition = new ConcurrentHashMap<>();
+
+    public boolean isInitialRefreshDone() {
+        return initialRefreshDone.get();
+    }
 
     NewPartitionReassignment genReassignment(Node leader, int replicationFactor, Collection<Node> nodes) {
         var replicaCandidates = nodes.stream()
@@ -78,19 +85,24 @@ public class PartitionRebalancer {
 
     private void recalculateRacksByPartition() {
         try {
-            var nodeRacks = adminClient.describeCluster()
-                    .nodes()
-                    .get()
-                    .stream()
-                    .collect(Collectors.toMap(Node::id, Node::rack));
-            for (var entry : partitionsByBroker.entrySet()) {
-                var broker = entry.getKey();
-                var partitions = entry.getValue();
-                var rack = nodeRacks.getOrDefault(broker, "unknown");
-                for (var partition : partitions) {
-                    rackByPartition.put(partition, rack);
-                }
-            }
+            adminClient.describeCluster()
+                .nodes().whenComplete(
+                    (nodes, throwable) -> {
+                        if (throwable != null) {
+                            Log.error("Failed to get nodes", throwable);
+                            throw new RuntimeException("Failed to get nodes", throwable);
+                        }
+                        var nodeRacks = nodes.stream().collect(Collectors.toMap(Node::id, n -> Optional.ofNullable(n.rack())));
+                        for (var entry : partitionsByBroker.entrySet()) {
+                            var broker = entry.getKey();
+                            var partitions = entry.getValue();
+                            var rack = nodeRacks.get(broker).orElse("unknown");
+                            for (var partition : partitions) {
+                                rackByPartition.put(partition, rack);
+                            }
+                        }
+                    }
+                );
         } catch (Exception e) {
             Log.warn("Failed to get racks of partition leaders.", e);
         }
@@ -167,12 +179,13 @@ public class PartitionRebalancer {
     void refreshPartitionsFallback() {
         Log.error("Failed to refresh partitions after 3 retries, disabling rebalancing feature");
         refreshPartitionsEnabled = false;
+        initialRefreshDone.set(true);
     }
 
     @Fallback(fallbackMethod = "refreshPartitionsFallback")
     @ExponentialBackoff(maxDelay = 30000)
     @Retry(maxRetries = 3)
-    @Scheduled(every = "60s", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
+    @Scheduled(every = "60s", delay = 5L, delayUnit = TimeUnit.SECONDS, concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
     void refreshPartitions() {
         if (!refreshPartitionsEnabled) {
             return;
@@ -207,6 +220,8 @@ public class PartitionRebalancer {
                 // make sure that each broker is a leader for at least one partition
                 reassignPartitionsToBrokers(topicDescr, nodes);
                 recalculateRacksByPartition();
+                Log.debugv("Partition refresh done");
+                initialRefreshDone.set(true);
             });
         });
     }

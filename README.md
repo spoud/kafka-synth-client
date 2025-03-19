@@ -10,57 +10,17 @@ If the client is given the required ACLs, it will report latencies per broker.
 It is also able to automatically increase the number of partitions in a topic to match the number of brokers
 and automatically reassigns partitions to brokers to ensure that each broker will be produced to and consumed from.
 
-## Configuration and Usage
+For detailed information see our documentation at https://spoud.github.io/kafka-synth-client/.
 
-The preferred way to configure the client is to use environment variables.
-The following environment variables are specific to the client:
 
-- `SYNTH_CLIENT_MESSAGES_MESSAGE_SIZE_BYTES` (default: 8): The size of each Kafka message in bytes.
-- `SYNTH_CLIENT_MESSAGES_MESSAGES_PER_SECOND` (default: 1): The number of messages to produce per second.
-- `SYNTH_CLIENT_MESSAGES_IGNORE_FIRST_N_MESSAGES` (default: 1): The number of messages (per partition) to ignore before starting to measure latencies. This is useful for avoiding adding noise to the metrics when the consumer group is being rebalanced. The default value should be sufficient.
-- `SYNTH_CLIENT_TOPIC`: The Kafka topic to produce to and consume from.
-- `SYNTH_CLIENT_RACK`: Some identifier of the environment in which the client is running. For example "eu-west-1a". This is useful for measuring latencies between clients that are running in different environments. Can be left unset if this is not relevant. If you have multiple racks, then be sure to assign a unique consumer group ID to each rack.
-- `QUARKUS_HTTP_PORT` (default: 8081): The port on which the metrics endpoint will be exposed.
+## Contributing
 
-Additionally, you will need to provide configuration for connecting to Kafka. This is also provided via environment variables.
-Use the following rule to convert a config property name to an environment variable name:
-- Replace all dots (`.`) with underscores (`_`)
-- Convert to uppercase
-- Prefix with `KAFKA_`
+We welcome contributions to this project.
 
-For example, the Kafka property `bootstrap.servers` would be set as the environment variable `KAFKA_BOOTSTRAP_SERVERS`.
 
-For a list of Kafka configuration options, see the following links:
-- [Kafka Producer Configuration](https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html)
-- [Kafka Consumer Configuration](https://docs.confluent.io/platform/current/installation/configuration/consumer-configs.html)
+## Development
 
-Note that key/value serializers and deserializers are already configured and should not be overridden.
-
-In order to work properly, the client's Kafka user needs to have ACL permissions to do the following operations:
-
-- Describe, Read, Write, Alter the configured topic
-- Read the configured consumer group
-
-An example for setting this up for a Strimzi cluster is available in the `examples/` folder.
-Now, with the client running, you can view the metrics at `http://localhost:8081/q/metrics`:
-
-```
-$ curl localhost:8081/q/metrics -s | grep synth_client_e2e
-# TYPE synth_client_e2e_latency_ms_max gauge
-# HELP synth_client_e2e_latency_ms_max End-to-end latency of the synthetic client
-synth_client_e2e_latency_ms_max{broker="0"} 365.0
-# TYPE synth_client_e2e_latency_ms summary
-# HELP synth_client_e2e_latency_ms End-to-end latency of the synthetic client
-synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.5"} 7.125
-synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.8"} 11.375
-synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.9"} 12.375
-synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.95"} 16.875
-synth_client_e2e_latency_ms{broker="0",from="dc1",partition="0",to="dc1",quantile="0.99"} 367.875
-synth_client_e2e_latency_ms_count{broker="0",from="dc1",partition="0",to="dc1"} 60.0
-synth_client_e2e_latency_ms_sum{broker="0",from="dc1",partition="0",to="dc1"} 825.0
-```
-
-## Running the application in dev mode
+### Running the application in dev mode
 
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
@@ -74,7 +34,7 @@ You can run your application in dev mode that enables live coding using:
 
 > **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
 
-## Packaging and running the application
+### Packaging and running the application
 
 The application can be packaged using:
 
@@ -112,3 +72,4 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 You can then execute your native executable with: `./target/kafka-synth-client-0.0.1-runner`
 
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+

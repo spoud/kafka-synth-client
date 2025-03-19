@@ -16,5 +16,9 @@ include::getting-started.adoc[]
 <<<
 include::parameters.adoc[]
 
+<<<
+include::multi-dc-simulation.adoc[]
 
+<<<
+include::dashboards.adoc[]
 

@@ -1,0 +1,41 @@
+
+== Multi DC simulation
+
+We have created a docker-compose file that simulates a multi-DC Kafka cluster with 3 DCs.
+
+Ensure you have built the image with maven.
+
+Startup:
+
+[source,shell script]
+----
+docker-compose -f multi-dc-docker-compose.yaml up -d
+----
+
+Dashboard can be found at `http://localhost:3000` with username `admin` and password `admin`.
+Prometheus can be found at `http://localhost:9090`.
+There is 2 sets of synth clients deployed one reading and writing to a not replicated topic `...ackone` and one to a fully replicated topic `...ackall`.
+
+Introduce latency on the network in DC2 (requires pumba to be installed https://github.com/alexei-led/pumba):
+
+[source,shell script]
+----
+pumba netem --tc-image ghcr.io/alexei-led/pumba-alpine-nettools:latest \
+    --duration 5m \
+    delay --time 1000 \
+    --jitter 100 \
+    redpanda-2
+
+# you may want to enter another broker and test the delay wit pings
+docker exec -u 0 -ti redpanda-1 bash
+apt update; apt install -y iputils-ping
+ping redpanda-2
+
+----
+
+Tear down:
+
+[source,shell script]
+----
+docker-compose -f multi-dc-docker-compose.yaml down -v
+----

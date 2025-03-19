@@ -1,0 +1,13 @@
+global:
+
+scrape_configs:
+  - job_name: 'kafka-synth-client'
+    scrape_interval: 5s
+    metrics_path: /q/metrics
+    static_configs:
+      - targets: [ 'kafka-synth-client-ackall-0:8081' ]
+      - targets: [ 'kafka-synth-client-ackall-1:8081' ]
+      - targets: [ 'kafka-synth-client-ackall-2:8081' ]
+      - targets: [ 'kafka-synth-client-ackone-0:8081' ]
+      - targets: [ 'kafka-synth-client-ackone-1:8081' ]
+      - targets: [ 'kafka-synth-client-ackone-2:8081' ]

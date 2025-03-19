@@ -45,6 +45,12 @@ class TimeServiceTest {
             public boolean autoCreateTopic() {
                 return false;
             }
+
+            @Override
+            public int topicReplicationFactor() {
+                return 1;
+            }
+
         });
 
         timeService.updateClockOffset(); // make sure that this even works without exceptions

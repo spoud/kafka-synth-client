@@ -31,6 +31,7 @@ public class MetricService {
     public static final String PRODUCE_ERROR_RATE_METER_NAME = "synth-client.producer.error-rate";
     public static final String TIME_SINCE_LAST_CONSUMPTION_METER_NAME = "synth-client.time-since-last-consumption";
 
+    private static final String TAG_TOPIC = "topic";
     private static final String TAG_PARTITION = "partition";
     private static final String TAG_BROKER = "broker";
     private static final String TAG_TO_RACK = "toRack";
@@ -88,6 +89,10 @@ public class MetricService {
 
     synchronized public void recordLatency(String topic, int partition, long latencyMs, String fromRack) {
         Log.debugv("Latency for partition {0}: {1}ms", partition, latencyMs);
+        if(!partitionRebalancer.isInitialRefreshDone()) {
+            Log.info("Ignoring latencies as the initial partition assignment is not done yet");
+            return;
+        }
         String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
                 .map(String::valueOf)
                 .orElse("unknown");
@@ -101,11 +106,11 @@ public class MetricService {
         }
         var key = new PartitionRackPair(partition, fromRack);
         var e2eLatency = e2eLatencies
-                .computeIfAbsent(key, (k) -> genE2eSummary(partition, broker, fromRack, partitionLeaderRack));
+                .computeIfAbsent(key, (k) -> genE2eSummary(topic, partition, broker, fromRack, partitionLeaderRack));
         if (!e2eLatency.broker().equals(broker)) {
             // broker changed, recreate the distribution summary
             meterRegistry.remove(e2eLatency.distributionSummary());
-            e2eLatency = genE2eSummary(partition, broker, fromRack, partitionLeaderRack);
+            e2eLatency = genE2eSummary(topic, partition, broker, fromRack, partitionLeaderRack);
             e2eLatencies.put(key, e2eLatency);
         }
         e2eLatency.distributionSummary().record(latencyMs);
@@ -113,24 +118,29 @@ public class MetricService {
 
     public void recordAckLatency(String topic, int partition, Duration between) {
         Log.debugv("Ack latency for partition {0}: {1}ms", partition, between.toMillis());
+        if(!partitionRebalancer.isInitialRefreshDone()) {
+            Log.info("Ignoring ack latency as the initial partition assignment is not done yet");
+            return;
+        }
         String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
                 .map(String::valueOf)
                 .orElse("unknown");
         String partitionLeaderRack = partitionRebalancer.getRackOfPartitionLeader(partition);
-        var ackLatency = ackLatenciesByPartition.computeIfAbsent(partition, (k) -> genAckSummary(partition, broker, partitionLeaderRack));
+        var ackLatency = ackLatenciesByPartition.computeIfAbsent(partition, (k) -> genAckSummary(topic, partition, broker, partitionLeaderRack));
         if (!ackLatency.broker().equals(broker)) {
             // broker changed, recreate the distribution summary
             meterRegistry.remove(ackLatency.distributionSummary());
-            ackLatency = genAckSummary(partition, broker, partitionLeaderRack);
+            ackLatency = genAckSummary(topic, partition, broker, partitionLeaderRack);
             ackLatenciesByPartition.put(partition, ackLatency);
         }
         ackLatency.distributionSummary().record(between.toMillis());
     }
 
-    private WrappedDistributionSummary genAckSummary(int partition, String broker, String brokerRack) {
+    private WrappedDistributionSummary genAckSummary(String topic, int partition, String broker, String brokerRack) {
         return new WrappedDistributionSummary(DistributionSummary
                 .builder(ACK_METER_NAME)
                 .baseUnit("ms")
+                .tag(TAG_TOPIC, topic)
                 .tag(TAG_PARTITION, String.valueOf(partition))
                 .tag(TAG_BROKER, broker)
                 .tag(TAG_RACK, config.rack())
@@ -142,10 +152,11 @@ public class MetricService {
                 .register(meterRegistry), broker);
     }
 
-    private WrappedDistributionSummary genE2eSummary(int partition, String broker, String fromRack, String brokerRack) {
+    private WrappedDistributionSummary genE2eSummary(String topic, int partition, String broker, String fromRack, String brokerRack) {
         return new WrappedDistributionSummary(DistributionSummary
                 .builder(E2E_METER_NAME)
                 .baseUnit("ms")
+                .tag(TAG_TOPIC, topic)
                 .tag(TAG_PARTITION, String.valueOf(partition))
                 .tag(TAG_BROKER, broker)
                 .tag(TAG_TO_RACK, config.rack())

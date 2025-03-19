@@ -20,4 +20,7 @@ public interface SynthClientConfig {
 
     @WithDefault("true")
     boolean autoCreateTopic();
+
+    @WithDefault("1")
+    int topicReplicationFactor();
 }

@@ -31,12 +31,13 @@ For this to work the client needs `Create` permissions on the configured topic.
 
 === Required ACLs
 
-In order to work properly, the client's user needs to have ACL permissions to do the following operations:
+In order to work properly, the client's Kafka user needs to have ACL permissions to do the following operations:
 
 - Describe, Read, Write, Alter the configured topic
 - Read the configured consumer group
+- Describe the cluster
 
-For information on how to configure the consumer group and the topic, see the Parameters section.
+For information on how to configure the consumer group and the topic, see the <<Parameters>> section.
 An example for setting this up for a Strimzi cluster is available in the `examples/` folder.
 
 === Available Metrics
@@ -48,11 +49,13 @@ The synth client exposes the following metrics in prometheus format (on the `/q/
 ```
 # HELP synth_client_e2e_latency_ms End-to-end latency of the synthetic client
 # TYPE synth_client_e2e_latency_ms summary
-synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.5",} 6.125
-synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.8",} 7.125
-synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.9",} 9.375
-synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.95",} 9.375
-synth_client_e2e_latency_ms{broker="0",fromRack="rack1",partition="0",toRack="rack1",quantile="0.99",} 10.375
+synth_client_e2e_latency_ms{broker="2",fromRack="rack1",partition="0",toRack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack2",quantile="0.5",} 2.0625
+synth_client_e2e_latency_ms{broker="2",fromRack="rack1",partition="0",toRack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack2",quantile="0.8",} 2.0625
+synth_client_e2e_latency_ms{broker="2",fromRack="rack1",partition="0",toRack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack2",quantile="0.9",} 3.0625
+synth_client_e2e_latency_ms{broker="2",fromRack="rack1",partition="0",toRack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack2",quantile="0.95",} 3.0625
+synth_client_e2e_latency_ms{broker="2",fromRack="rack1",partition="0",toRack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack2",quantile="0.99",} 3.0625
+synth_client_e2e_latency_ms_count{broker="2",fromRack="rack1",partition="0",toRack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack2",} 717.0
+synth_client_e2e_latency_ms_sum{broker="2",fromRack="rack1",partition="0",toRack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack2",} 4409.0
 ```
 
 This latency describes the time it took for a produced message to be consumed. The latency is measured in milliseconds.
@@ -64,11 +67,13 @@ you have a service level objective (SLO) for the end-to-end latency of your Kafk
 ```
 # HELP synth_client_ack_latency_ms Ack latency of the synthetic client
 # TYPE synth_client_ack_latency_ms summary
-synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.5",} 4.1875
-synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.8",} 5.1875
-synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.9",} 6.1875
-synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.95",} 7.1875
-synth_client_ack_latency_ms{broker="0",partition="0",rack="eu-west",quantile="0.99",} 9.4375
+synth_client_ack_latency_ms{broker="0",partition="1",rack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack0",quantile="0.5",} 1.0
+synth_client_ack_latency_ms{broker="0",partition="1",rack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack0",quantile="0.8",} 1.0
+synth_client_ack_latency_ms{broker="0",partition="1",rack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack0",quantile="0.9",} 1.0
+synth_client_ack_latency_ms{broker="0",partition="1",rack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack0",quantile="0.95",} 2.0625
+synth_client_ack_latency_ms{broker="0",partition="1",rack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack0",quantile="0.99",} 2.0625
+synth_client_ack_latency_ms_count{broker="0",partition="1",rack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack0",} 1092.0
+synth_client_ack_latency_ms_sum{broker="0",partition="1",rack="rack0",topic="kafka-synth-client-test-ackone",viaBrokerRack="rack0",} 1292.0
 ```
 
 This latency describes the time it took for a produced message to be acknowledged by the broker. The latency is measured in milliseconds.

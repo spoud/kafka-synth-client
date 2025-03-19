@@ -1,6 +1,6 @@
 services:
   redpanda-0:
-    image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
     command:
       - redpanda
       - start
@@ -16,7 +16,7 @@ services:
       - --default-log-level=info
 
   console:
-    image: docker.redpanda.com/redpandadata/console:v2.7.2
+    image: docker.redpanda.com/redpandadata/console:v2.8.4
     entrypoint: /bin/sh
     command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml; /app/console'
     environment:
