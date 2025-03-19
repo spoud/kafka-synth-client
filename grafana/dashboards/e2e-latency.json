@@ -1709,6 +1709,24 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              }
+            ]
           }
         ]
       },
@@ -1745,13 +1763,29 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "synth_client_ack_latency_ms{rack=\"${source_rack}\",quantile=~\"${quantile}\"}",
+          "expr": "synth_client_ack_latency_ms{rack=\"${source_rack}\",topic=~\".*ackall.*\",quantile=~\"${quantile}\"}",
           "format": "time_series",
           "instant": false,
           "interval": "",
           "legendFormat": "via broker {{broker}} - q{{quantile}}",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": ""
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "synth_client_ack_latency_ms{rack=\"${source_rack}\",topic=~\".*ackone.*\",quantile=~\"${quantile}\"}",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "via broker {{broker}} - q{{quantile}}",
+          "range": true,
+          "refId": "B"
         }
       ],
       "title": "Ack Latency ${source_rack} -> ${destination_rack}",
