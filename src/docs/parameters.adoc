@@ -1,6 +1,6 @@
 == Parameters
 
-You have the possibility to tweak the configuration using environment variables. Below is an overview of some key configuration parameters.
+The preferred way to configure the client is to use environment variables. Below is an overview of some key configuration parameters.
 
 |===
 |Parameter | default | Description
@@ -21,7 +21,8 @@ You have the possibility to tweak the configuration using environment variables.
 | 1
 | The number of messages to produce per second.
 
-| `SYNTH_CLIENT_MESSAGES_MESSAGES_IGNORE_FIRST_N_MESSAGES`
+
+| `SYNTH_CLIENT_MESSAGES_IGNORE_FIRST_N_MESSAGES`
 | 1
 | The number of messages (per partition) to ignore before starting to measure latencies. This is useful for avoiding adding noise to the metrics when the consumer group is being rebalanced. The default value should be sufficient.
 
@@ -30,9 +31,21 @@ You have the possibility to tweak the configuration using environment variables.
 | "default"
 | Some identifier of the environment in which the client is running. For example "eu-west-1a". This is useful for measuring latencies between clients that are running in different environments. Can be left unset if not needed. If you have multiple racks, then be sure to assign a unique consumer group ID to each rack.
 
+| `SYNTH_CLIENT_AUTO_CREATE_TOPIC`
+| true
+| If the topic is managed by the synth client and also created by the synth client. This requires `CREATE` permissions.
+
+| `SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR`
+| 1
+| Replication factor to use when creating the topic.
+
 | `QUARKUS_HTTP_PORT`
 | 8081
 | The port on which the metrics endpoint will be exposed.
+
+| `QUARKUS_LOG_LEVEL`
+| INFO
+| Set to `DEBUG` to get more insights.
 |===
 
 Furthermore, any environment variable prefixed with `KAFKA_` will be interpreted as a Kafka Producer/Consumer configuration property.
@@ -43,3 +56,16 @@ For example, setting `KAFKA_GROUP_ID` will set the value of the `group.id` consu
 
 Be aware that e.g. `${file:/path/to/file}` needs to be escaped in the environment variable. For example, `KAFKA_CONFIG_PROVIDERS_FILE_PATH=\${file:/path/to/file}` otherwise quarkus will try to resolve it as variable and you will see `Error injecting java.util.Map<java.lang.String, java.lang.String> io.spoud.kafka.KafkaFactory.config`.
 
+Use the following rule to convert a config property name to an environment variable name:
+- Replace all dots (`.`) with underscores (`_`)
+- Convert to uppercase
+- Prefix with `KAFKA_`
+
+For example, the Kafka property `bootstrap.servers` would be set as the environment variable `KAFKA_BOOTSTRAP_SERVERS`.
+
+For a list of Kafka configuration options, see the following links:
+
+- https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html[Kafka Producer Configuration]
+- https://docs.confluent.io/platform/current/installation/configuration/consumer-configs.html[Kafka Consumer Configuration]
+
+Note that key/value serializers and deserializers are already configured and must not be overridden.

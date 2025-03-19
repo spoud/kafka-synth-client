@@ -1,0 +1,310 @@
+networks:
+  redpanda_network:
+    driver: bridge
+volumes:
+  redpanda-0: null
+  redpanda-1: null
+  redpanda-2: null
+services:
+  redpanda-0:
+    command:
+      - redpanda
+      - start
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda-0:9092,external://localhost:19092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr internal://redpanda-0:8082,external://localhost:18082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --rpc-addr redpanda-0:33145
+      - --advertise-rpc-addr redpanda-0:33145
+      - --mode dev-container
+      - --smp 1
+      - --default-log-level=info
+      - --set redpanda.auto_create_topics_enabled=0
+      - --set redpanda.rack=rack0
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
+    container_name: redpanda-0
+    volumes:
+      - redpanda-0:/var/lib/redpanda/data
+    networks:
+      - redpanda_network
+    ports:
+      - 18081:18081
+      - 18082:18082
+      - 19092:19092
+      - 19644:9644
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+  redpanda-1:
+    command:
+      - redpanda
+      - start
+      - --node-id 1
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:29092
+      - --advertise-kafka-addr internal://redpanda-1:9092,external://localhost:29092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:28082
+      - --advertise-pandaproxy-addr internal://redpanda-1:8082,external://localhost:28082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:28081
+      - --rpc-addr redpanda-1:33145
+      - --advertise-rpc-addr redpanda-1:33145
+      - --mode dev-container
+      - --smp 1
+      - --default-log-level=info
+      - --seeds redpanda-0:33145
+      - --set redpanda.auto_create_topics_enabled=0
+      - --set redpanda.rack=rack1
+
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
+    container_name: redpanda-1
+    volumes:
+      - redpanda-1:/var/lib/redpanda/data
+    networks:
+      - redpanda_network
+    ports:
+      - 28081:28081
+      - 28082:28082
+      - 29092:29092
+      - 29644:9644
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      - redpanda-0
+  redpanda-2:
+    command:
+      - redpanda
+      - start
+      - --node-id 2
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:39092
+      - --advertise-kafka-addr internal://redpanda-2:9092,external://localhost:39092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:38082
+      - --advertise-pandaproxy-addr internal://redpanda-2:8082,external://localhost:38082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:38081
+      - --rpc-addr redpanda-2:33145
+      - --advertise-rpc-addr redpanda-2:33145
+      - --mode dev-container
+      - --smp 1
+      - --default-log-level=info
+      - --seeds redpanda-0:33145
+      - --set redpanda.auto_create_topics_enabled=0
+      - --set redpanda.rack=rack2
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
+    container_name: redpanda-2
+    volumes:
+      - redpanda-2:/var/lib/redpanda/data
+    networks:
+      - redpanda_network
+    ports:
+      - 38081:38081
+      - 38082:38082
+      - 39092:39092
+      - 39644:9644
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      - redpanda-0
+  console:
+    container_name: redpanda-console
+    image: docker.redpanda.com/redpandadata/console:v2.8.4
+    networks:
+      - redpanda_network
+    entrypoint: /bin/sh
+    command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml; /app/console'
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["redpanda-0:9092"]
+          schemaRegistry:
+            enabled: true
+            urls: ["http://redpanda-0:8081"]
+        redpanda:
+          adminApi:
+            enabled: true
+            urls: ["http://redpanda-0:9644"]
+    ports:
+      - 8080:8080
+    depends_on:
+      - redpanda-0
+      - redpanda-1
+      - redpanda-2
+  kafka-synth-client-ackall-0:
+    image: spoud/kafka-synth-client:latest
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    networks:
+      - redpanda_network
+    ports:
+      - 18088:8081
+    environment:
+      - QUARKUS_LOG_LEVEL=INFO
+      - QUARKUS_LOG_CATEGORY__IO_SPOUD__LEVEL=DEBUG
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-0:9092
+      - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackall
+      - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=-1
+      - SYNTH_CLIENT_RACK=rack0
+    depends_on:
+      redpanda-0:
+        condition: service_healthy
+      redpanda-1:
+        condition: service_healthy
+      redpanda-2:
+        condition: service_healthy
+
+  kafka-synth-client-ackall-1:
+    image: spoud/kafka-synth-client:latest
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    networks:
+      - redpanda_network
+    ports:
+      - 28088:8081
+    environment:
+      - QUARKUS_LOG_LEVEL=INFO
+      - QUARKUS_LOG_CATEGORY__IO_SPOUD__LEVEL=DEBUG
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:9092
+      - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackall
+      - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=-1
+      - SYNTH_CLIENT_RACK=rack1
+    depends_on:
+      redpanda-0:
+        condition: service_healthy
+      redpanda-1:
+        condition: service_healthy
+      redpanda-2:
+        condition: service_healthy
+  kafka-synth-client-ackall-2:
+    image: spoud/kafka-synth-client:latest
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    networks:
+      - redpanda_network
+    ports:
+      - 38088:8081
+    environment:
+      - QUARKUS_LOG_LEVEL=INFO
+      - QUARKUS_LOG_CATEGORY__IO_SPOUD__LEVEL=DEBUG
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-2:9092
+      - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackall
+      - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=-1
+      - SYNTH_CLIENT_RACK=rack2
+    depends_on:
+      redpanda-0:
+        condition: service_healthy
+      redpanda-1:
+        condition: service_healthy
+      redpanda-2:
+        condition: service_healthy
+
+  kafka-synth-client-ackone-0:
+    image: spoud/kafka-synth-client:latest
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    networks:
+      - redpanda_network
+    ports:
+      - 18089:8081
+    environment:
+      - QUARKUS_LOG_LEVEL=INFO
+      - QUARKUS_LOG_CATEGORY__IO_SPOUD__LEVEL=DEBUG
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-0:9092
+      - KAFKA_ACKS=1
+      - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=1
+      - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackone
+      - SYNTH_CLIENT_RACK=rack0
+    depends_on:
+      redpanda-0:
+        condition: service_healthy
+      redpanda-1:
+        condition: service_healthy
+      redpanda-2:
+        condition: service_healthy
+  kafka-synth-client-ackone-1:
+    image: spoud/kafka-synth-client:latest
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    networks:
+      - redpanda_network
+    ports:
+      - 28089:8081
+    environment:
+      - QUARKUS_LOG_LEVEL=INFO
+      - QUARKUS_LOG_CATEGORY__IO_SPOUD__LEVEL=DEBUG
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:9092
+      - KAFKA_ACKS=1
+      - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=1
+      - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackone
+      - SYNTH_CLIENT_RACK=rack1
+    depends_on:
+      redpanda-0:
+        condition: service_healthy
+      redpanda-1:
+        condition: service_healthy
+      redpanda-2:
+        condition: service_healthy
+  kafka-synth-client-ackone-2:
+    image: spoud/kafka-synth-client:latest
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    networks:
+      - redpanda_network
+    ports:
+      - 38089:8081
+    environment:
+      - QUARKUS_LOG_LEVEL=INFO
+      - QUARKUS_LOG_CATEGORY__IO_SPOUD__LEVEL=DEBUG
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda-2:9092
+      - KAFKA_ACKS=1
+      - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=1
+      - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackone
+      - SYNTH_CLIENT_RACK=rack2
+    depends_on:
+      redpanda-0:
+        condition: service_healthy
+      redpanda-1:
+        condition: service_healthy
+      redpanda-2:
+        condition: service_healthy
+  prometheus:
+    image: prom/prometheus:latest
+    networks:
+      - redpanda_network
+    ports:
+      - 9090:9090
+    volumes:
+      - ./docker/prometheus-multi-dc.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - kafka-synth-client-ackall-0
+      - kafka-synth-client-ackall-1
+      - kafka-synth-client-ackall-2
+      - kafka-synth-client-ackone-0
+      - kafka-synth-client-ackone-1
+      - kafka-synth-client-ackone-2
+  grafana:
+    image: grafana/grafana:latest
+    networks:
+      - redpanda_network
+    volumes:
+      - ./grafana:/etc/grafana/provisioning
+    ports:
+      - 3000:3000
+    depends_on:
+      - prometheus
