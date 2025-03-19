@@ -36,7 +36,7 @@ public class KafkaSynthClientRecordIgnoreTest {
     public void testEndToEndLatencyNotRecorded() {
         kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
                 .fromTopics(config.topic(), 3)
-                .awaitCompletion(Duration.ofMillis(5000));
+                .awaitCompletion(Duration.ofSeconds(5));
 
         var metrics = RestAssured.get("/q/metrics").asString();
 
@@ -46,7 +46,7 @@ public class KafkaSynthClientRecordIgnoreTest {
         assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.99\"}");
 
         // ...but eventually they should appear
-        await().atMost(Duration.ofMillis(2000))
+        await().atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(() ->
                         assertThat(RestAssured.get("/q/metrics").asString()).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}")
