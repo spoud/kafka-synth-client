@@ -60,13 +60,13 @@ public class KafkaSynthClient {
                     replicationFactor = (short) nodes.size();
                 }
                 short finalReplicationFactor = replicationFactor;
+                int minInSyncReplicas = Math.max(finalReplicationFactor -1, 1);
                 this.adminClient.listTopics().names().whenComplete((topics, throwable) -> {
                     if (throwable != null) {
                         throw new RuntimeException("Failed to list topics", throwable);
                     }
                     if (!topics.contains(config.topic())) {
 
-                            int minInSyncReplicas = finalReplicationFactor -1;
                             this.adminClient.createTopics(List.of(new NewTopic(config.topic(), nodes.size(), finalReplicationFactor).configs(
                                     Map.of(TopicConfig.RETENTION_MS_CONFIG, "3600000", TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG, String.valueOf(minInSyncReplicas))
                             ))).all().whenComplete((v, t1) -> {
@@ -104,8 +104,8 @@ public class KafkaSynthClient {
                                 throw new RuntimeException("Failed to get topic config", t1);
                             }
                             var minInSyncReplicasConfig = configEntries.get(cr).get(TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG);
-                            if(minInSyncReplicasConfig == null || Integer.parseInt(minInSyncReplicasConfig.value()) != finalReplicationFactor -1) {
-                                Log.errorf("Min in sync replicas for topic %s is %s, expected %s", config.topic(), minInSyncReplicasConfig, finalReplicationFactor -1);
+                            if(minInSyncReplicasConfig == null || Integer.parseInt(minInSyncReplicasConfig.value()) != minInSyncReplicas) {
+                                Log.errorf("Min in sync replicas for topic %s is %s, expected %s", config.topic(), minInSyncReplicasConfig, minInSyncReplicas);
                             }
                         });
 
