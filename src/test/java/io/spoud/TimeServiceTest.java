@@ -8,6 +8,8 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TimeServiceTest {
@@ -51,6 +53,30 @@ class TimeServiceTest {
                 return 1;
             }
 
+            @Override
+            public Duration samplingTimeWindow() {
+                return null;
+            }
+
+            @Override
+            public int minSamplesFirstWindow() {
+                return 0;
+            }
+
+            @Override
+            public boolean publishHistogramBuckets() {
+                return false;
+            }
+
+            @Override
+            public Double expectedMinLatency() {
+                return 1.0;
+            }
+
+            @Override
+            public Double expectedMaxLatency() {
+                return 5000.0;
+            }
         });
 
         timeService.updateClockOffset(); // make sure that this even works without exceptions

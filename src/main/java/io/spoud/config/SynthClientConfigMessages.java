@@ -3,6 +3,8 @@ package io.spoud.config;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
 
+import java.time.Duration;
+
 public interface SynthClientConfigMessages {
     int messageSizeBytes();
     int messagesPerSecond();
@@ -14,7 +16,6 @@ public interface SynthClientConfigMessages {
      *
      * @return number of messages to ignore
      */
-    @WithDefault("1")
     @WithName("ignore-first-n-messages")
     int ignoreFirstNMessages();
 }

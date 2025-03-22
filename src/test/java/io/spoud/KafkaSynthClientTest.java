@@ -2,6 +2,7 @@ package io.spoud;
 
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.kafka.InjectKafkaCompanion;
 import io.quarkus.test.kafka.KafkaCompanionResource;
 import io.restassured.RestAssured;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 @QuarkusTestResource(KafkaCompanionResource.class)
+@TestProfile(FirstSampleWindow1TestProfile.class)
 public class KafkaSynthClientTest {
     @InjectKafkaCompanion
     KafkaCompanion kafkaCompanion;
@@ -52,7 +54,7 @@ public class KafkaSynthClientTest {
     @DisplayName("End-to-end latency metrics are recorded")
     public void testEndToEndLatencyRecorded() {
         kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
-                .fromTopics(config.topic(), 3)
+                .fromTopics(config.topic(), 30)
                 .awaitCompletion(Duration.ofSeconds(5));
 
         var metrics = RestAssured.get("/q/metrics").asString();
@@ -69,7 +71,7 @@ public class KafkaSynthClientTest {
     @DisplayName("Ack latency metrics are recorded")
     public void testAckLatencyRecorded() {
         kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
-                .fromTopics(config.topic(), 3)
+                .fromTopics(config.topic(), 30)
                 .awaitCompletion(Duration.ofSeconds(5));
 
         var metrics = RestAssured.get("/q/metrics").asString();

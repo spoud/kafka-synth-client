@@ -13,31 +13,54 @@ The preferred way to configure the client is to use environment variables. Below
 | _<mandatory>_
 | The Kafka topic to produce to and consume from.
 
+| `SYNTH_CLIENT_RACK`
+| "default"
+| Some identifier of the environment in which the client is running. For example "eu-west-1a". This is useful for measuring latencies between clients that are running in different environments. Can be left unset if not needed. If you have multiple racks, then be sure to assign a unique consumer group ID to each rack.
+
 | `SYNTH_CLIENT_MESSAGES_MESSAGE_SIZE_BYTES`
 | 8
 | The size of each Kafka message in bytes.
 
 | `SYNTH_CLIENT_MESSAGES_MESSAGES_PER_SECOND`
-| 1
+| 10
 | The number of messages to produce per second.
 
-
 | `SYNTH_CLIENT_MESSAGES_IGNORE_FIRST_N_MESSAGES`
-| 1
+| 10
 | The number of messages (per partition) to ignore before starting to measure latencies. This is useful for avoiding adding noise to the metrics when the consumer group is being rebalanced. The default value should be sufficient.
 
+| `SYNTH_CLIENT_SAMPLING_TIME_WINDOW`
+| 2m
+| Duration length of the time window for which to calculate the latencies. The default value should be sufficient.
 
-| `SYNTH_CLIENT_RACK`
-| "default"
-| Some identifier of the environment in which the client is running. For example "eu-west-1a". This is useful for measuring latencies between clients that are running in different environments. Can be left unset if not needed. If you have multiple racks, then be sure to assign a unique consumer group ID to each rack.
+| `SYNTH_CLIENT_MIN_SAMPLES_FIRST_WINDOW`
+| 100
+| Number of samples before percentiles are calculated. The default value should be sufficient.
 
 | `SYNTH_CLIENT_AUTO_CREATE_TOPIC`
 | true
 | If the topic is managed by the synth client and also created by the synth client. This requires `CREATE` permissions.
 
+| `SYNTH_CLIENT_TIME_SERVERS`
+| time.google.com
+| NTP server to use for time synchronization.
+
 | `SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR`
 | 1
 | Replication factor to use when creating the topic.
+
+
+| `SYNTH_CLIENT_PUBLISH_HISTOGRAM_BUCKETS`
+| false
+| Will publish the histogram buckets to the metrics endpoint if enabled. `..., synth_client_e2e_latency_ms_bucket{...,le="41.0",} 902.0, synth_client_e2e_latency_ms_bucket{...,le="46.0",} 902.0, ...`
+
+| `SYNTH_CLIENT_EXPECTED_MIN_LATENCY`
+| 1.0
+| Minimum expected latency in milliseconds. Used to create histogram buckets when enabled.
+
+| `SYNTH_CLIENT_EXPECTED_MAX_LATENCY`
+| 1.0
+| Maximum expected latency in milliseconds. Used to create histogram buckets when enabled.
 
 | `QUARKUS_HTTP_PORT`
 | 8081
