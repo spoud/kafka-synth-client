@@ -5,18 +5,28 @@ import io.spoud.MetricService;
 import io.spoud.TimeService;
 import io.spoud.config.SynthClientConfig;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Default;
+import jakarta.inject.Qualifier;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.eclipse.microprofile.health.HealthCheck;
+import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Liveness;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
+@Liveness
+@Default
 @ApplicationScoped
-public class MessageProducer {
+public class MessageProducer implements HealthCheck {
     private final KafkaFactory kafkaFactory;
     private final MetricService metricService;
     private final TimeService timeService;
     private final SynthClientConfig config;
+    private final AtomicReference<Instant> lastMessage = new AtomicReference<>(Instant.now());
     private KafkaProducer<Long, byte[]> producer;
 
     public static final String HEADER_RACK = "rack";
@@ -46,8 +56,16 @@ public class MessageProducer {
                 Log.error("Failed to send message", exception);
             } else {
                 Instant ack = Instant.now();
+                lastMessage.set(ack);
                 metricService.recordAckLatency(metadata.topic(), metadata.partition(), Duration.between(send, ack));
             }
         });
+    }
+
+    @Override
+    public HealthCheckResponse call() {
+        return lastMessage.get().isAfter(Instant.now().minus(1, ChronoUnit.MINUTES))
+                ? HealthCheckResponse.up("Producer is running")
+                : HealthCheckResponse.down("Producer is not running");
     }
 }
