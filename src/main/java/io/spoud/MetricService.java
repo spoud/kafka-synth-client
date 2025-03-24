@@ -1,9 +1,6 @@
 package io.spoud;
 
-import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.TimeGauge;
+import io.micrometer.core.instrument.*;
 import io.quarkus.logging.Log;
 import io.spoud.config.SynthClientConfig;
 import io.spoud.kafka.PartitionRebalancer;
@@ -15,10 +12,7 @@ import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -38,6 +32,9 @@ public class MetricService {
     private static final String TAG_FROM_RACK = "fromRack";
     private static final String TAG_BROKER_RACK = "viaBrokerRack";
     private static final String TAG_RACK = "rack";
+
+    private List<Long> e2eLatencyInitialBuffer = new ArrayList<>();
+    private List<Long> ackLatencyInitialBuffer = new ArrayList<>();
 
     private final MeterRegistry meterRegistry;
     private final PartitionRebalancer partitionRebalancer;
@@ -89,7 +86,7 @@ public class MetricService {
 
     synchronized public void recordLatency(String topic, int partition, long latencyMs, String fromRack) {
         Log.debugv("Latency for partition {0}: {1}ms", partition, latencyMs);
-        if(!partitionRebalancer.isInitialRefreshDone()) {
+        if (!partitionRebalancer.isInitialRefreshDone()) {
             Log.info("Ignoring latencies as the initial partition assignment is not done yet");
             return;
         }
@@ -97,7 +94,7 @@ public class MetricService {
                 .map(String::valueOf)
                 .orElse("unknown");
         String partitionLeaderRack = partitionRebalancer.getRackOfPartitionLeader(partition);
-        long recordsSeen = messagesConsumedPerPartition.computeIfAbsent(partition, (k) -> (long)0);
+        long recordsSeen = messagesConsumedPerPartition.computeIfAbsent(partition, (k) -> (long) 0);
         messagesConsumedPerPartition.put(partition, Math.max(1, recordsSeen + 1));
         if (recordsSeen < config.messages().ignoreFirstNMessages()) {
             Log.debugv("Ignoring latency for partition {0} as we have seen only {1} / {2} records",
@@ -113,12 +110,22 @@ public class MetricService {
             e2eLatency = genE2eSummary(topic, partition, broker, fromRack, partitionLeaderRack);
             e2eLatencies.put(key, e2eLatency);
         }
-        e2eLatency.distributionSummary().record(latencyMs);
+        if (e2eLatencyInitialBuffer.size() < config.minSamplesFirstWindow()) {
+            e2eLatencyInitialBuffer.add(latencyMs);
+            if (e2eLatencyInitialBuffer.size() == config.minSamplesFirstWindow()) {
+                Log.info("Initial e2e latencies recorded");
+                Log.debugf("Initial e2e latencies recorded for partition %s %s", partition, e2eLatencyInitialBuffer);
+                WrappedDistributionSummary finalE2eLatency = e2eLatency;
+                e2eLatencyInitialBuffer.forEach(latency -> finalE2eLatency.distributionSummary().record(latency));
+            }
+        } else {
+            e2eLatency.distributionSummary().record(latencyMs);
+        }
     }
 
     public void recordAckLatency(String topic, int partition, Duration between) {
         Log.debugv("Ack latency for partition {0}: {1}ms", partition, between.toMillis());
-        if(!partitionRebalancer.isInitialRefreshDone()) {
+        if (!partitionRebalancer.isInitialRefreshDone()) {
             Log.info("Ignoring ack latency as the initial partition assignment is not done yet");
             return;
         }
@@ -133,7 +140,18 @@ public class MetricService {
             ackLatency = genAckSummary(topic, partition, broker, partitionLeaderRack);
             ackLatenciesByPartition.put(partition, ackLatency);
         }
-        ackLatency.distributionSummary().record(between.toMillis());
+        if (ackLatencyInitialBuffer.size() < config.minSamplesFirstWindow()) {
+            ackLatencyInitialBuffer.add(between.toMillis());
+            if (ackLatencyInitialBuffer.size() == config.minSamplesFirstWindow()) {
+                Log.info("Initial ack latencies recorded");
+                Log.debugf("Initial ack latencies recorded for partition %s %s", partition, ackLatencyInitialBuffer);
+                WrappedDistributionSummary finalAckLatency = ackLatency;
+                ackLatencyInitialBuffer.forEach(latency -> finalAckLatency.distributionSummary().record(latency));
+            }
+        } else {
+            ackLatency.distributionSummary().record(between.toMillis());
+        }
+
     }
 
     private WrappedDistributionSummary genAckSummary(String topic, int partition, String broker, String brokerRack) {
@@ -146,9 +164,11 @@ public class MetricService {
                 .tag(TAG_RACK, config.rack())
                 .tag(TAG_BROKER_RACK, brokerRack)
                 .description("Ack latency of the synthetic client")
-                .minimumExpectedValue(1.0)
-                .maximumExpectedValue(10_000.0)
+                .minimumExpectedValue(config.expectedMinLatency())
+                .maximumExpectedValue(config.expectedMaxLatency())
                 .publishPercentiles(0.5, 0.8, 0.9, 0.95, 0.99)
+                .publishPercentileHistogram(config.publishHistogramBuckets())
+                .distributionStatisticExpiry(config.samplingTimeWindow())
                 .register(meterRegistry), broker);
     }
 
@@ -166,6 +186,8 @@ public class MetricService {
                 .minimumExpectedValue(1.0)
                 .maximumExpectedValue(10_000.0)
                 .publishPercentiles(0.5, 0.8, 0.9, 0.95, 0.99)
+                .publishPercentileHistogram(config.publishHistogramBuckets())
+                .distributionStatisticExpiry(config.samplingTimeWindow())
                 .register(meterRegistry), broker);
     }
 
