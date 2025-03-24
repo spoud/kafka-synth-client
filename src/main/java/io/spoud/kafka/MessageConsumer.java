@@ -11,17 +11,24 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.header.Header;
+import org.eclipse.microprofile.health.HealthCheck;
+import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Liveness;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class MessageConsumer implements Runnable, AutoCloseable {
+@Liveness
+public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
 
     private final SynthClientConfig config;
     private final KafkaConsumer<Long, byte[]> consumer;
@@ -102,5 +109,12 @@ public class MessageConsumer implements Runnable, AutoCloseable {
             Log.infov("Closing consumer for topic {0}", config.topic());
             consumer.close();
         }
+    }
+
+    @Override
+    public HealthCheckResponse call() {
+        return lastReport.get().isAfter(Instant.now().minus(1, ChronoUnit.MINUTES))
+                ? HealthCheckResponse.up("Consumer is running")
+                : HealthCheckResponse.down("Consumer is not running");
     }
 }

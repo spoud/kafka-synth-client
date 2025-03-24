@@ -113,13 +113,13 @@ public class PartitionRebalancer {
     }
 
     public Map<Integer, List<Integer>> getPartitionsByBroker() {
-        return new HashMap<>(partitionsByBroker); // return a copy
+        return new ConcurrentHashMap<>(partitionsByBroker); // return a copy
     }
 
     void reassignPartitionsToBrokers(TopicDescription topicDescription, Collection<Node> nodes) {
         // build a map of broker -> list of partitions
         var brokers = new ArrayList<>(nodes);
-        partitionsByBroker = new HashMap<>();
+        partitionsByBroker = new ConcurrentHashMap<>();
         for (var partition : topicDescription.partitions()) {
             var leader = partition.leader();
             if (leader == null) {
