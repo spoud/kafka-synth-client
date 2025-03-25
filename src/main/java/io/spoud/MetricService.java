@@ -86,11 +86,11 @@ public class MetricService {
 
     synchronized public void recordLatency(String topic, int partition, long latencyMs, String fromRack) {
         Log.debugv("Latency for partition {0}: {1}ms", partition, latencyMs);
-        if (!partitionRebalancer.isInitialRefreshDone()) {
+        if (partitionRebalancer.isInitialRefreshPending()) {
             Log.info("Ignoring latencies as the initial partition assignment is not done yet");
             return;
         }
-        String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
+        String broker = partitionRebalancer.getBrokerIdForPartition(partition)
                 .map(String::valueOf)
                 .orElse("unknown");
         String partitionLeaderRack = partitionRebalancer.getRackOfPartitionLeader(partition);
@@ -125,11 +125,11 @@ public class MetricService {
 
     public void recordAckLatency(String topic, int partition, Duration between) {
         Log.debugv("Ack latency for partition {0}: {1}ms", partition, between.toMillis());
-        if (!partitionRebalancer.isInitialRefreshDone()) {
+        if (partitionRebalancer.isInitialRefreshPending()) {
             Log.info("Ignoring ack latency as the initial partition assignment is not done yet");
             return;
         }
-        String broker = partitionRebalancer.getBrokerIdForPartition(topic, partition)
+        String broker = partitionRebalancer.getBrokerIdForPartition(partition)
                 .map(String::valueOf)
                 .orElse("unknown");
         String partitionLeaderRack = partitionRebalancer.getRackOfPartitionLeader(partition);
