@@ -27,9 +27,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-@Liveness
 public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
 
+    private final int index;
     private final SynthClientConfig config;
     private final KafkaConsumer<Long, byte[]> consumer;
     private final MetricService metricService;
@@ -38,10 +38,12 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
     private final AtomicReference<Instant> lastReport = new AtomicReference<>(Instant.now());
     private final AtomicLong counter = new AtomicLong(0);
 
-    public MessageConsumer(KafkaFactory kafkaFactory,
+    public MessageConsumer(int index,
+                           KafkaFactory kafkaFactory,
                            SynthClientConfig config,
                            MetricService metricService,
                            TimeService timeService) {
+        this.index = index;
         this.config = config;
         this.metricService = metricService;
         this.timeService = timeService;
@@ -93,7 +95,7 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
                     metricService.recordLatency(message.topic(), message.partition(), consumeTime - produceTime, fromRack);
                     lastReport.updateAndGet(last -> {
                         if (Duration.between(last, Instant.now()).getSeconds() > 10) {
-                            Log.infov("Consumed {0} messages/seconds", counter.getAndSet(0) / 10.0);
+                            Log.infov("Consumed {0} {1} messages/seconds", index,counter.getAndSet(0) / 10.0);
                             return Instant.now();
                         }
                         return last;
@@ -106,7 +108,7 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
         } catch (Exception e) {
             Log.error("Error while consuming messages", e);
         } finally {
-            Log.infov("Closing consumer for topic {0}", config.topic());
+            Log.infov("Closing consumer {0} for topic {1}", index, config.topic());
             consumer.close();
         }
     }
@@ -114,7 +116,7 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
     @Override
     public HealthCheckResponse call() {
         return lastReport.get().isAfter(Instant.now().minus(1, ChronoUnit.MINUTES))
-                ? HealthCheckResponse.up("Consumer is running")
-                : HealthCheckResponse.down("Consumer is not running");
+                ? HealthCheckResponse.named("Consumer " + index + " is running").withData("lastReport", this.lastReport.toString()).up().build()
+                : HealthCheckResponse.named("Consumer " + index + " is not running").withData("lastReport", this.lastReport.toString()).down().build();
     }
 }

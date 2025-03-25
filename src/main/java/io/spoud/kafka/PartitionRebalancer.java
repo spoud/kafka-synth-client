@@ -113,7 +113,7 @@ public class PartitionRebalancer {
     }
 
     public Map<Integer, List<Integer>> getPartitionsByBroker() {
-        return new ConcurrentHashMap<>(partitionsByBroker); // return a copy
+        return Collections.unmodifiableMap(partitionsByBroker);
     }
 
     void reassignPartitionsToBrokers(TopicDescription topicDescription, Collection<Node> nodes) {
