@@ -13,7 +13,6 @@ import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.config.ConfigResource;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
@@ -26,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -43,13 +41,13 @@ public class PartitionRebalancer {
     @Inject
     MessageProducer producer;
 
-    boolean refreshPartitionsEnabled = true;
-    AtomicBoolean initialRefreshDone = new AtomicBoolean(false);
-    Map<Integer, List<Integer>> partitionsByBroker = new ConcurrentHashMap<>();
-    Map<Integer, String> rackByPartition = new ConcurrentHashMap<>();
+    private boolean refreshPartitionsEnabled = true;
+    private final AtomicBoolean initialRefreshDone = new AtomicBoolean(false);
+    private final Map<Integer, List<Integer>> partitionsByBroker = new ConcurrentHashMap<>();
+    private final Map<Integer, String> rackByPartition = new ConcurrentHashMap<>();
 
-    public boolean isInitialRefreshDone() {
-        return initialRefreshDone.get();
+    public boolean isInitialRefreshPending() {
+        return !initialRefreshDone.get();
     }
 
     NewPartitionReassignment genReassignment(Node leader, int replicationFactor, Collection<Node> nodes) {
@@ -66,8 +64,7 @@ public class PartitionRebalancer {
         return new NewPartitionReassignment(replicaIds);
     }
 
-    // TODO what about the topic ?
-    public Optional<Integer> getBrokerIdForPartition(String topic, int partition) {
+    public Optional<Integer> getBrokerIdForPartition(int partition) {
         for (var entry : getPartitionsByBroker().entrySet()) {
             var brokerId = entry.getKey();
             var partitions = entry.getValue();
@@ -119,37 +116,38 @@ public class PartitionRebalancer {
     void reassignPartitionsToBrokers(TopicDescription topicDescription, Collection<Node> nodes) {
         // build a map of broker -> list of partitions
         var brokers = new ArrayList<>(nodes);
-        partitionsByBroker = new ConcurrentHashMap<>();
+        final var newPartitionAssignment = new HashMap<Integer, List<Integer>>();
         for (var partition : topicDescription.partitions()) {
             var leader = partition.leader();
             if (leader == null) {
                 Log.warnv("Partition {0} has no leader", partition.partition());
                 continue;
             }
-            partitionsByBroker.computeIfAbsent(leader.id(), (k) -> new ArrayList<>()).add(partition.partition());
+            newPartitionAssignment.computeIfAbsent(leader.id(), (k) -> new ArrayList<>()).add(partition.partition());
         }
         // print partitions by broker
-        for (var entry : partitionsByBroker.entrySet()) {
+        for (var entry : newPartitionAssignment.entrySet()) {
             Log.infov("Broker {0} has partitions {1}", entry.getKey(), entry.getValue());
         }
         // sort the brokers by the number of partitions they are a leader for
-        brokers.sort(Comparator.comparingLong(n -> partitionsByBroker.computeIfAbsent(n.id(), (k) -> new ArrayList<>()).size()));
+        brokers.sort(Comparator.comparingLong(n -> newPartitionAssignment.computeIfAbsent(n.id(), (k) -> new ArrayList<>()).size()));
         var i = 0;
         var j = brokers.size() - 1;
-        if (partitionsByBroker.get(brokers.get(i).id()).size() > 0) {
+        if (!newPartitionAssignment.get(brokers.get(i).id()).isEmpty()) {
             // each broker has at least one partition, nothing to do
             Log.debug("Each broker has at least one partition. Will not reassign partitions");
+            partitionsByBroker.putAll(newPartitionAssignment);
             return;
         }
         while (i < j) {
             var poorBroker = brokers.get(i);
             var richBroker = brokers.get(j);
-            if (partitionsByBroker.get(poorBroker.id()).size() > 0) {
+            if (!newPartitionAssignment.get(poorBroker.id()).isEmpty()) {
                 // the poorest broker has at least one partition, meaning that each broker has at least one partition
                 break;
             }
-            var partitionToGive = partitionsByBroker.get(richBroker.id()).remove(0);
-            partitionsByBroker.get(poorBroker.id()).add(partitionToGive);
+            var partitionToGive = newPartitionAssignment.get(richBroker.id()).removeFirst();
+            newPartitionAssignment.get(poorBroker.id()).add(partitionToGive);
             var tp = new TopicPartition(config.topic(), partitionToGive);
 
             var assignment = genReassignment(poorBroker, getTopicReplicationFactor(topicDescription), nodes);
@@ -160,14 +158,15 @@ public class PartitionRebalancer {
                 break;
             }
 
-            if (partitionsByBroker.get(richBroker.id()).size() < 2) {
+            if (newPartitionAssignment.get(richBroker.id()).size() < 2) {
                 j--;
             }
             i++;
         }
-        for (var entry : partitionsByBroker.entrySet()) {
+        for (var entry : newPartitionAssignment.entrySet()) {
             Log.infov("New assignment: Broker {0} has partitions {1}", entry.getKey(), entry.getValue());
         }
+        partitionsByBroker.putAll(newPartitionAssignment);
         producer.recreateProducer(); // recreate the producer to make sure that it is aware of the new partitions
     }
 
