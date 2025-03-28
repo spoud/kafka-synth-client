@@ -49,7 +49,6 @@ The preferred way to configure the client is to use environment variables. Below
 | 1
 | Replication factor to use when creating the topic.
 
-
 | `SYNTH_CLIENT_PUBLISH_HISTOGRAM_BUCKETS`
 | false
 | Will publish the histogram buckets to the metrics endpoint if enabled. `..., synth_client_e2e_latency_ms_bucket{...,le="41.0",} 902.0, synth_client_e2e_latency_ms_bucket{...,le="46.0",} 902.0, ...`
@@ -69,6 +68,10 @@ The preferred way to configure the client is to use environment variables. Below
 | `QUARKUS_LOG_LEVEL`
 | INFO
 | Set to `DEBUG` to get more insights.
+
+| `JAVA_MAX_MEM_RATIO`
+| 50
+| This is used to calculate the default maximal heap memory based on a container's restriction. If used in a container without any memory constraints for the container then this option has no effect. The default is `50` which means 50% of the available memory is used as an upper boundary.
 |===
 
 Furthermore, any environment variable prefixed with `KAFKA_` will be interpreted as a Kafka Producer/Consumer configuration property.
@@ -92,3 +95,6 @@ For a list of Kafka configuration options, see the following links:
 - https://docs.confluent.io/platform/current/installation/configuration/consumer-configs.html[Kafka Consumer Configuration]
 
 Note that key/value serializers and deserializers are already configured and must not be overridden.
+
+When deploying a synth-client instance, be sure that it is not completely utilizing the CPU.
+If the CPU is fully utilized, then the client will not be able to consume messages in a timely manner, which will result in skewed latencies.
