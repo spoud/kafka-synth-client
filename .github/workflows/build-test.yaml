@@ -77,8 +77,8 @@ jobs:
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
           VERSION="${{ github.ref_name }}-native"
           
-          mvn package -DskipTests
-          docker build -t $IMAGE_ID:$VERSION . -f src/main/docker/Dockerfile.jvm
+          mvn package -DskipTests -Dnative -Dquarkus.native.container-build=true
+          docker build -t $IMAGE_ID:$VERSION . -f src/main/docker/Dockerfile.native
       - name: Push Image
         run: |
           # Log in to registry
