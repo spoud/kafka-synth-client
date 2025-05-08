@@ -7,7 +7,6 @@ import io.spoud.kafka.PartitionRebalancer;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
@@ -15,23 +14,22 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
+import java.util.function.ToDoubleFunction;
 
 @ApplicationScoped
 public class MetricService {
 
     public static final String E2E_METER_NAME = "synth-client.e2e.latency";
     public static final String ACK_METER_NAME = "synth-client.ack.latency";
-    public static final String PRODUCE_ERROR_RATE_METER_NAME = "synth-client.producer.error-rate";
     public static final String TIME_SINCE_LAST_CONSUMPTION_METER_NAME = "synth-client.time-since-last-consumption";
 
-    private static final String TAG_TOPIC = "topic";
-    private static final String TAG_PARTITION = "partition";
-    private static final String TAG_BROKER = "broker";
-    private static final String TAG_TO_RACK = "toRack";
-    private static final String TAG_FROM_RACK = "fromRack";
-    private static final String TAG_BROKER_RACK = "viaBrokerRack";
-    private static final String TAG_RACK = "rack";
+    public static final String TAG_TOPIC = "topic";
+    public static final String TAG_PARTITION = "partition";
+    public static final String TAG_BROKER = "broker";
+    public static final String TAG_TO_RACK = "toRack";
+    public static final String TAG_FROM_RACK = "fromRack";
+    public static final String TAG_BROKER_RACK = "viaBrokerRack";
+    public static final String TAG_RACK = "rack";
 
     private List<Long> e2eLatencyInitialBuffer = new ArrayList<>();
     private List<Long> ackLatencyInitialBuffer = new ArrayList<>();
@@ -53,27 +51,14 @@ public class MetricService {
         this.partitionRebalancer = partitionRebalancer;
         this.config = config;
         this.kafkaClientId = kafkaClientId;
-        meterRegistry.gauge(PRODUCE_ERROR_RATE_METER_NAME, Tags.of(TAG_RACK, config.rack()), this, MetricService::getProduceErrorRate);
         TimeGauge.builder(TIME_SINCE_LAST_CONSUMPTION_METER_NAME, this, TimeUnit.MILLISECONDS,
                         MetricService::getMillisecondsSinceLastConsumption)
                 .tag(TAG_RACK, config.rack())
                 .register(meterRegistry);
     }
 
-    public double getProduceErrorRate() {
-        try {
-            String mbeanName = String.format("kafka.producer:client-id=%s,type=producer-metrics", kafkaClientId);
-            ObjectName objectName = new ObjectName(mbeanName);
-            MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
-            return (double) mBeanServer.getAttribute(objectName, "record-error-rate");
-        } catch (Exception e) {
-            Log.error("Error retrieving error rate", e);
-            Log.debugv("Available MBeans: {0}",
-                    getAvailableMBeanNames().stream()
-                            .map(ObjectName::toString)
-                            .collect(Collectors.joining("\n\t- ", "\n", "")));
-            return -1;
-        }
+    public <T> void addGauge(String name, Tags tags, T stateObject, ToDoubleFunction<T> valueFunction) {
+        meterRegistry.gauge(name, tags, stateObject, valueFunction);
     }
 
     public long getMillisecondsSinceLastConsumption() {
