@@ -68,6 +68,20 @@ public class KafkaSynthClientTest {
     }
 
     @Test
+    @DisplayName("Send-error-rate metrics are recorded")
+    public void testSendErrorRateRecorded() {
+        kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
+                .fromTopics(config.topic(), 30)
+                .awaitCompletion(Duration.ofSeconds(5));
+
+        var metrics = RestAssured.get("/q/metrics").asString();
+
+        assertThat(metrics).contains("synth_client_producer_error_rate{rack=\"dc1\"} 0.0");
+
+        lifecycle.shutdown();
+    }
+
+    @Test
     @DisplayName("Ack latency metrics are recorded")
     public void testAckLatencyRecorded() {
         kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
