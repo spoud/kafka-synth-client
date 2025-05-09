@@ -95,7 +95,7 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
                     metricService.recordLatency(message.topic(), message.partition(), consumeTime - produceTime, fromRack);
                     lastReport.updateAndGet(last -> {
                         if (Duration.between(last, Instant.now()).getSeconds() > 10) {
-                            Log.infov("Consumed {0} {1} messages/seconds", index,counter.getAndSet(0) / 10.0);
+                            Log.infov("Consumer {0}: {1} messages/second", index,counter.getAndSet(0) / 10.0);
                             return Instant.now();
                         }
                         return last;
