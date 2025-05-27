@@ -6,7 +6,7 @@
 :toc:
 
 // where are images located?
-:imagesdir: ./images
+:imagesdir: ./
 
 :source-highlighter: highlight.js
 :highlightjs-languages: graphql, yaml, json, shell
