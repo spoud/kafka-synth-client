@@ -11,3 +11,5 @@
 :source-highlighter: highlight.js
 :highlightjs-languages: graphql, yaml, json, shell
 :highlightjsdir: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0
+
+:title-logo-image: image:img/logo/social-preview.png[top=25%,align=center,pdfwidth=0.5in]
