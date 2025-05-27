@@ -1,10 +1,10 @@
 # kafka-synth-client
 
-A dummy Kafka client (producer+consumer) that measures end-to-end latency of using Kafka.
-The latencies are measured by sending messages to the given Kafka topic, consuming them
+A simple Kafka client (producer+consumer) that measures end-to-end latency of using Kafka.
+The latencies are measured by sending messages to the given Kafka topic via all the brokers, consuming them
 and measuring the time it took for the message to be produced and consumed.
 The recorded latencies are reported in prometheus format on a metrics endpoint (`/q/metrics`).
-The metrics contain values for the median, 95th percentile, and 99th percentile of the latencies.
+The metrics contain values for the median, percentiles like 95th percentile, and 99th percentile of the latencies.
 
 If the client is given the required ACLs, it will report latencies per broker.
 It is also able to automatically increase the number of partitions in a topic to match the number of brokers

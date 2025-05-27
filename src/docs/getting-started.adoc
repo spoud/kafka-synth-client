@@ -40,6 +40,15 @@ In order to work properly, the client's Kafka user needs to have ACL permissions
 For information on how to configure the consumer group and the topic, see the <<Parameters>> section.
 An example for setting this up for a Strimzi cluster is available in the `examples/` folder.
 
+=== Deployment locations
+
+The synth client is designed to be deployed in all the location where your Kafka users run their applications.
+The better you cover all the used network zones and paths the better you can measure the end-to-end latency of your Kafka messages.
+
+.Deployment in different locations
+image::img/synth-client-deployment.drawio.svg[]
+
+
 === Available Metrics
 
 The synth client exposes the following metrics in prometheus format (on the `/q/metrics` endpoint):
