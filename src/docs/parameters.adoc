@@ -13,6 +13,10 @@ The preferred way to configure the client is to use environment variables. Below
 | _<mandatory>_
 | The Kafka topic to produce to and consume from.
 
+| `SYNTH_CLIENT_CONSUMER_TOPIC_REGEX`
+| a regex pattern that matches only the value of `SYNTH_CLIENT_TOPIC`
+| A regex pattern describing which topics to consume from. This is only needed if the topics you want to consume from differ from the topic you produce to.
+
 | `SYNTH_CLIENT_RACK`
 | "default"
 | Some identifier of the environment in which the client is running. For example "eu-west-1a". This is useful for measuring latencies between clients that are running in different environments. Can be left unset if not needed. If you have multiple racks, then be sure to assign a unique consumer group ID to each rack.

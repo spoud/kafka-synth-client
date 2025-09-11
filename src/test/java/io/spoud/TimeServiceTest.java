@@ -9,6 +9,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,6 +23,11 @@ class TimeServiceTest {
             @Override
             public String topic() {
                 return null;
+            }
+
+            @Override
+            public Optional<Pattern> consumerTopicRegex() {
+                return Optional.empty();
             }
 
             @Override

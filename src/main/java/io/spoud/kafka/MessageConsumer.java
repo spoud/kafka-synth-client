@@ -13,19 +13,16 @@ import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.header.Header;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
-import org.eclipse.microprofile.health.Liveness;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
 
@@ -62,8 +59,10 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
 
     @Override
     public void run() {
-        Log.infov("Subscribing to topic {0}", config.topic());
-        consumer.subscribe(List.of(config.topic()), new ConsumerRebalanceListener() {
+        var topicPattern = config.consumerTopicRegex()
+                .orElse(Pattern.compile("^%s$".formatted(Pattern.quote(config.topic()))));
+        Log.infov("Subscribing to topics matching {0}", topicPattern);
+        consumer.subscribe(topicPattern, new ConsumerRebalanceListener() {
             @Override
             public void onPartitionsRevoked(Collection<TopicPartition> collection) {
                 if (!collection.isEmpty()) {
