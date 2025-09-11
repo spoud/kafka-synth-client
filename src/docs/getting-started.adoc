@@ -10,7 +10,7 @@ Start everything using
 docker-compose up -d
 ```
 
-This will start a kafka broker, the kafka-synth-client and prometheus so you can store visualize the metrics. Prometheus will be available at `http://localhost:9090`. You can try the following queries:
+This will start a kafka broker, the kafka-synth-client and prometheus so you can visualize the metrics. Prometheus will be available at `http://localhost:9090`. You can try the following queries:
 ```promql
 synth_client_e2e_latency_ms
 ```
@@ -23,6 +23,7 @@ Refer to the chapter <<Parameters>> for more information on the available parame
 
 The synth-client requires a topic to produce and consume messages from configured by `synth-client.topic` property.
 The topic needs to have the number of partitions equal to the number of brokers in the Kafka cluster.
+(If synth-client notices that this is not the case, it will attempt to increase the number of partitions to match the number of brokers, if it has the required permissions.)
 
 As data is random we recommend short retention times for the topic.
 
@@ -42,8 +43,8 @@ An example for setting this up for a Strimzi cluster is available in the `exampl
 
 === Deployment locations
 
-The synth client is designed to be deployed in all the location where your Kafka users run their applications.
-The better you cover all the used network zones and paths the better you can measure the end-to-end latency of your Kafka messages.
+The synth client is designed to be deployed in all the locations where your Kafka users run their applications.
+The better you cover all the used network zones and paths, the better you can measure the end-to-end latency of your Kafka messages.
 
 .Deployment in different locations
 image::img/synth-client-deployment.drawio.svg[]
@@ -88,7 +89,7 @@ synth_client_ack_latency_ms_sum{broker="0",partition="1",rack="rack0",topic="kaf
 This latency describes the time it took for a produced message to be acknowledged by the broker. The latency is measured in milliseconds.
 The synth client reports the median, 80th, 90th, 95th, and 99th percentile of the latencies. These metrics are handy if
 you would like to know how long it takes for your message to be acknowledged by the broker.
-This is especially interesting if you configure the producer with `acks=all` (you can do this in the synth client by setting the `KAFKA_ACKS` environment variable to `all`).,
+This is especially interesting if you configure the producer with `acks=all` (you can do this in the synth client by setting the `KAFKA_ACKS` environment variable to `all`),
 as this will only acknowledge the message once it has been received by all replicas.
 In this case, we are effectively monitoring the time it takes to replicate the message across all replicas.
 The `rack` label indicates the "rack" or environment in which the client is running.

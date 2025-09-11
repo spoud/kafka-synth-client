@@ -1,6 +1,6 @@
 == Dashboards
 
-This repos contains example dashboards you can use to visualize the metrics exposed by the synth client.
+This repository contains example dashboards you can use to visualize the metrics exposed by the synth client.
 
 On the first panel you can see the e2e latency between producer (source rack) and consumer (destination rack).
 
@@ -11,7 +11,7 @@ took and what the latency was.
 
 image::img/e2e-via-rack.png[]
 
-In this image we see the latencies that were recorded by messages that were passing though any broker in the selected
+In this image we see the latencies that were recorded by messages that were passing through any broker in the selected
 `via Broker Rack` (in this case `rack2`).
 
 
@@ -22,4 +22,4 @@ for the broker to acknowledge the message. This is especially interesting if you
 `acks=all` as this will only acknowledge the message once it has been received by all replicas.
 
 If you want to compare the acks settings it's best to deploy 2 sets of synth clients with different acks settings
- and a dedicated topic with no replication for `acks=1` setting.
+and a dedicated topic with no replication for `acks=1` setting.
