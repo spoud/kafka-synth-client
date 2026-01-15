@@ -69,6 +69,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push multi-arch image
+        id: docker_build
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -100,15 +101,22 @@ jobs:
           echo "Installing cosign ${COSIGN_VERSION}"
           curl -sSL "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" -o /usr/local/bin/cosign
           chmod +x /usr/local/bin/cosign
+          cosign version
 
       - name: Sign image with cosign (keyless)
-        # keyless signing uses the workflow's OIDC token (id-token permission required)
+        # keyless signing uses GitHub Actions OIDC (id-token permission required) and should sign the pushed digest
         run: |
           set -euo pipefail
-          echo "Verifying existing signature (if any)"
-          cosign verify || true
-          echo "Signing image ${{ env.IMAGE_ID }}:${{ env.VERSION }} (keyless)"
-          cosign sign --keyless ${{ env.IMAGE_ID }}:${{ env.VERSION }}
+          IMAGE_REF="${{ env.IMAGE_ID }}@${{ steps.docker_build.outputs.digest }}"
+          echo "Signing image ${IMAGE_REF} (keyless)"
+          cosign sign --yes "${IMAGE_REF}"
+
+      - name: Attach SBOM attestation with cosign
+        run: |
+          set -euo pipefail
+          IMAGE_REF="${{ env.IMAGE_ID }}@${{ steps.docker_build.outputs.digest }}"
+          echo "Attesting SBOM to ${IMAGE_REF}"
+          cosign attest --yes --predicate sbom.json --type spdxjson "${IMAGE_REF}"
 
       - name: Show pushed images (registry client may show manifests)
         run: docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}"
