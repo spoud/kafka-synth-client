@@ -10,87 +10,105 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Configure your build (see README for more information)
+    # Use a matrix to run JVM and native builds concurrently and reuse common steps
+    strategy:
+      matrix:
+        include:
+          - type: jvm
+            distribution: temurin
+            dockerfile: src/main/docker/Dockerfile.jvm
+            versionSuffix: ""
+            mavenArgs: ""
+          - type: native
+            distribution: graalvm
+            dockerfile: src/main/docker/Dockerfile.native
+            versionSuffix: "-native"
+            mavenArgs: "-Dnative -Dquarkus.native.container-build=true"
     env:
       APP_NAME: kafka-synth-client
     permissions:
       contents: write
       packages: write
+      id-token: write
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
         with:
           java-version: '21'
-          distribution: 'temurin'
+          distribution: ${{ matrix.distribution }}
           cache: maven
+
       - name: Run Unit Tests
         run: mvn clean test
-      - name: Build Container Image
-        run: |
-          IMAGE_NAME=${{ github.repository_owner }}/$APP_NAME
-          IMAGE_ID=ghcr.io/$IMAGE_NAME
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          VERSION=${{ github.ref_name }}
-          
-          mvn package -DskipTests
-          docker build -t $IMAGE_ID:$VERSION . -f src/main/docker/Dockerfile.jvm
-      - name: Push Image
-        run: |
-          # Log in to registry
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
-          docker images
-          
-          IMAGE_NAME=${{ github.repository_owner }}/$APP_NAME
-          IMAGE_ID=ghcr.io/$IMAGE_NAME
 
-          # Change all uppercase to lowercase
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          VERSION=${{ github.ref_name }}
-          echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-          docker push $IMAGE_ID:$VERSION
-  build-native:
-    runs-on: ubuntu-latest
-    # Configure your build (see README for more information)
-    env:
-      APP_NAME: kafka-synth-client
-    permissions:
-      contents: write
-      packages: write
+      - name: Package Application
+        run: mvn package -DskipTests ${{ matrix.mavenArgs }}
 
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
+      - name: Prepare image name and version (lowercase)
+        run: |
+          # compute lowercase image id and version for GHCR (GHCR requires lowercase names)
+          IMAGE_ID="ghcr.io/${{ github.repository_owner }}/$APP_NAME"
+          IMAGE_ID=$(echo "$IMAGE_ID" | tr '[:upper:]' '[:lower:]')
+          VERSION="${{ github.ref_name }}${{ matrix.versionSuffix }}"
+          echo "IMAGE_ID=$IMAGE_ID" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Set up QEMU and Buildx for multi-platform builds
+        uses: docker/setup-buildx-action@v3
         with:
-          java-version: '21'
-          distribution: 'graalvm'
-          cache: maven
-      - name: Run Unit Tests
-        run: mvn clean test
-      - name: Build Container Image
-        run: |
-          IMAGE_NAME=${{ github.repository_owner }}/$APP_NAME
-          IMAGE_ID=ghcr.io/$IMAGE_NAME
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          VERSION="${{ github.ref_name }}-native"
-          
-          mvn package -DskipTests -Dnative -Dquarkus.native.container-build=true
-          docker build -t $IMAGE_ID:$VERSION . -f src/main/docker/Dockerfile.native
-      - name: Push Image
-        run: |
-          # Log in to registry
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
-          docker images
-          
-          IMAGE_NAME=${{ github.repository_owner }}/$APP_NAME
-          IMAGE_ID=ghcr.io/$IMAGE_NAME
+          platforms: linux/amd64,linux/arm64
 
-          # Change all uppercase to lowercase
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          VERSION="${{ github.ref_name }}-native"
-          echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-          docker push $IMAGE_ID:$VERSION
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push multi-arch image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.IMAGE_ID }}:${{ env.VERSION }}
+
+      - name: Generate SBOM for the pushed image
+        # install syft and generate SBOM for the pushed multi-arch image
+        run: |
+          set -euo pipefail
+          echo "Installing syft"
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          echo "Generating SBOM for ${{ env.IMAGE_ID }}:${{ env.VERSION }}"
+          syft ${{ env.IMAGE_ID }}:${{ env.VERSION }} -o json > sbom.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: sbom-${{ env.VERSION }}
+          path: sbom.json
+
+      - name: Install cosign (sigstore) for image signing
+        # install cosign binary directly so we don't rely on an action reference
+        run: |
+          set -euo pipefail
+          COSIGN_VERSION=v3.0.4
+          echo "Installing cosign ${COSIGN_VERSION}"
+          curl -sSL "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" -o /usr/local/bin/cosign
+          chmod +x /usr/local/bin/cosign
+
+      - name: Sign image with cosign (keyless)
+        # keyless signing uses the workflow's OIDC token (id-token permission required)
+        run: |
+          set -euo pipefail
+          echo "Verifying existing signature (if any)"
+          cosign verify || true
+          echo "Signing image ${{ env.IMAGE_ID }}:${{ env.VERSION }} (keyless)"
+          cosign sign --keyless ${{ env.IMAGE_ID }}:${{ env.VERSION }}
+
+      - name: Show pushed images (registry client may show manifests)
+        run: docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}"
