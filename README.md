@@ -73,3 +73,17 @@ You can then execute your native executable with: `./target/kafka-synth-client-0
 
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
 
+## Docker image
+
+On release publishing, a Docker image is built and published to Docker Hub.
+
+The image is signed using Cosign and the keyless with GitHub Token and the signature is also published as artifact.
+
+You can verify the image signature using the following command:
+
+```shell
+
+cosign verify ghcr.io/spoud/kafka-synth-client:v1.8.2 \
+  --certificate-identity https://github.com/spoud/kafka-synth-client/.github/workflows/build-test.yaml@refs/tags/v1.8.2 \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com | jq
+```

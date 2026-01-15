@@ -93,6 +93,16 @@ jobs:
           name: sbom-${{ env.VERSION }}
           path: sbom.json
 
+      - name: Upload SBOM to GitHub Release
+        # users expect supply-chain metadata to live alongside the release artifacts
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mv sbom.json "sbom-${{ env.VERSION }}.spdx.json"
+          gh release upload "${{ github.ref_name }}" "sbom-${{ env.VERSION }}.spdx.json" --clobber
+
       - name: Install cosign (sigstore) for image signing
         # install cosign binary directly so we don't rely on an action reference
         run: |
