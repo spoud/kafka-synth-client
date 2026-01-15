@@ -100,7 +100,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          mv sbom.json "sbom-${{ env.VERSION }}.spdx.json"
+          cp sbom.json "sbom-${{ env.VERSION }}.spdx.json"
           gh release upload "${{ github.ref_name }}" "sbom-${{ env.VERSION }}.spdx.json" --clobber
 
       - name: Install cosign (sigstore) for image signing
