@@ -7,12 +7,16 @@
     "dev": "vite --port=3001 --host",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "playwright test"
   },
   "dependencies": {
     "@mantine/charts": "^8.3.14",
     "@mantine/core": "^8.3.14",
+    "@mantine/dates": "^8.3.14",
     "@mantine/hooks": "^8.3.14",
+    "@tabler/icons": "^3.36.1",
+    "dayjs": "^1.11.19",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router": "^7.13.0",
@@ -20,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.58.2",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
