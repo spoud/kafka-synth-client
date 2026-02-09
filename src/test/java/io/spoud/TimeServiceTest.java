@@ -84,6 +84,16 @@ class TimeServiceTest {
             public Double expectedMaxLatency() {
                 return 5000.0;
             }
+
+            @Override
+            public String historyDatabasePath() {
+                return "jdbc:duckdb:";
+            }
+
+            @Override
+            public Duration historyRetentionPeriod() {
+                return Duration.ofSeconds(30);
+            }
         });
 
         timeService.updateClockOffset(); // make sure that this even works without exceptions
