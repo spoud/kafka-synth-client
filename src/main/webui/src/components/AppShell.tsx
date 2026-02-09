@@ -5,7 +5,6 @@ import {
   ActionIcon,
   useMantineColorScheme,
   rem,
-  Box,
   Stack,
 } from "@mantine/core";
 import { IconSun, IconMoon } from "@tabler/icons-react";

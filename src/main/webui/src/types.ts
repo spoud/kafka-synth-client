@@ -5,6 +5,7 @@ export interface MessagePath {
   toRack: string;
   viaBrokerRack: string;
   latestP99latency: number;
+  latestP99AckLatency?: number;
 }
 
 export interface LatencySummary {

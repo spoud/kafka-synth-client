@@ -96,6 +96,12 @@ export function MessagePathsDashboard() {
     lastUpdated?: string;
   };
 
+  const ackPaths = messagePaths.filter(
+    (mp) =>
+      mp.latestP99AckLatency != null &&
+      !Number.isNaN(Number(mp.latestP99AckLatency)),
+  );
+
   const { revalidate } = useRevalidator();
   const [latencyColor, setLatencyColor] = useState<string>(
     "var(--mantine-color-green-6)",
@@ -168,7 +174,7 @@ export function MessagePathsDashboard() {
         </div>
       )}
 
-      {messagePaths.length > 0 && (
+      {ackPaths.length > 0 && (
         <div>
           <Title
             order={4}
@@ -184,7 +190,7 @@ export function MessagePathsDashboard() {
             />
           </Title>
           <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4 }}>
-            {messagePaths.map((path) => (
+            {ackPaths.map((path) => (
               <MessagePathCard
                 key={`${path.fromRack}-${path.viaBrokerRack}`}
                 path={path}

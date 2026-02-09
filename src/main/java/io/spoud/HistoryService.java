@@ -109,21 +109,22 @@ public class HistoryService {
         }
     }
 
-    public record MessagePath(String fromRack, String toRack, String viaBrokerRack, float latestP99latency) {
+    public record MessagePath(String fromRack, String toRack, String viaBrokerRack, float latestP99latency, float latestP99AckLatency) {
     }
 
     @GET
     @Path("/message-paths")
     public List<MessagePath> getMessagePaths() throws SQLException {
         var paths = conn.createStatement().executeQuery("""
-                SELECT from_rack, to_rack, broker_rack, last(latency_ms ORDER BY timestamp ASC) AS latest_p99_latency
-                FROM e2e_latencies
-                WHERE percentile = 99
-                GROUP BY from_rack, to_rack, broker_rack
+                SELECT e2e.from_rack, e2e.to_rack, e2e.broker_rack, last(e2e.latency_ms ORDER BY e2e.timestamp ASC) AS latest_p99_latency, last(ack.latency_ms ORDER BY ack.timestamp ASC) AS latest_p99_ack_latency
+                FROM e2e_latencies e2e
+                LEFT JOIN ack_latencies ack ON e2e.broker_rack = ack.broker_rack AND e2e.from_rack = ack.rack AND ack.percentile = e2e.percentile
+                WHERE e2e.percentile = 99
+                GROUP BY e2e.from_rack, e2e.to_rack, e2e.broker_rack
                 """);
         var result = new ArrayList<MessagePath>();
         while (paths.next()) {
-            result.add(new MessagePath(paths.getString(1), paths.getString(2), paths.getString(3), paths.getFloat(4)));
+            result.add(new MessagePath(paths.getString(1), paths.getString(2), paths.getString(3), paths.getFloat(4), paths.getFloat(5)));
         }
         return result;
     }

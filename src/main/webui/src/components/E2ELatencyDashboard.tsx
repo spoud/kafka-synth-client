@@ -1,4 +1,9 @@
-import { useLoaderData, useNavigation, useRevalidator, useParams } from "react-router";
+import {
+  useLoaderData,
+  useNavigation,
+  useRevalidator,
+  useParams,
+} from "react-router";
 import { useInterval } from "@mantine/hooks";
 import { Stack, Title, Text } from "@mantine/core";
 import { type LatencySummary } from "../types";
@@ -45,7 +50,7 @@ export function E2ELatencyDashboard() {
       />
 
       {chartData.length > 0 && (
-        <Text size="sm" c="dimmed">
+        <Text size="xs" c="dimmed">
           Last updated: {new Date().toLocaleString()}
         </Text>
       )}
