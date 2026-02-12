@@ -68,6 +68,8 @@ spec:
         ports:
         - containerPort: 8081
           name: prometheus
+        - containerPort: 8080
+          name: http
         env:
         - name: SYNTH_CLIENT_TOPIC
           value: synth-client-topic
@@ -95,5 +97,29 @@ spec:
   - port: 8081
     protocol: TCP
     targetPort: 8081
+    name: prometheus
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+    name: http
   selector:
     app: synth-client
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: synth-client
+  labels:
+    app: synth-client
+spec:
+  rules:
+  - host: synth-client.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: synth-client
+            port:
+              number: 8080
