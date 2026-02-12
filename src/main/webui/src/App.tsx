@@ -12,6 +12,8 @@ import { AppShell } from "./components/AppShell";
 import { MessagePathsDashboard } from "./components/MessagePathsDashboard";
 import { E2ELatencyDashboard } from "./components/E2ELatencyDashboard";
 import { AckLatencyDashboard } from "./components/AckLatencyDashboard";
+import { loadMessagePaths } from "./loaders/messagePathsLoader";
+import { loadE2ELatencies, loadAckLatencies } from "./loaders/latencyLoaders";
 
 let router = createBrowserRouter([
   {
@@ -21,26 +23,7 @@ let router = createBrowserRouter([
         <MessagePathsDashboard />
       </AppShell>
     ),
-    loader: async () => {
-      try {
-        const response = await fetch("/history/message-paths");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        return {
-          messagePaths: data,
-          lastUpdated: new Date().toISOString(),
-        };
-      } catch (error) {
-        console.error("Failed to fetch message paths:", error);
-        return {
-          messagePaths: [],
-          error: error instanceof Error ? error.message : "Unknown error",
-          lastUpdated: new Date().toISOString(),
-        };
-      }
-    },
+    loader: loadMessagePaths,
   },
   {
     path: "/e2e-latencies/:fromRack/:viaRack/:toRack",
@@ -49,38 +32,7 @@ let router = createBrowserRouter([
         <E2ELatencyDashboard />
       </AppShell>
     ),
-    loader: async ({ params, request }) => {
-      try {
-        const url = new URL(request.url);
-        const intervalStart = url.searchParams.get("interval_start");
-        const intervalEnd = url.searchParams.get("interval_end");
-
-        let query = "";
-        if (intervalStart || intervalEnd) {
-          query =
-            "?" +
-            new URLSearchParams({
-              interval_start: intervalStart || "",
-              interval_end: intervalEnd || "",
-            }).toString();
-        }
-
-        const response = await fetch(
-          `/history/e2e-latencies/${params.fromRack}/${params.viaRack}/${params.toRack}${query}`,
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        return { latencyData: data };
-      } catch (error) {
-        console.error("Failed to fetch E2E latencies:", error);
-        return {
-          latencyData: { timestamps: [], percentiles: {} },
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
+    loader: ({ params, request }) => loadE2ELatencies({ params, request }),
   },
   {
     path: "/ack-latencies/:fromRack/:brokerRack",
@@ -89,38 +41,7 @@ let router = createBrowserRouter([
         <AckLatencyDashboard />
       </AppShell>
     ),
-    loader: async ({ params, request }) => {
-      try {
-        const url = new URL(request.url);
-        const intervalStart = url.searchParams.get("interval_start");
-        const intervalEnd = url.searchParams.get("interval_end");
-
-        let query = "";
-        if (intervalStart || intervalEnd) {
-          query =
-            "?" +
-            new URLSearchParams({
-              interval_start: intervalStart || "",
-              interval_end: intervalEnd || "",
-            }).toString();
-        }
-
-        const response = await fetch(
-          `/history/ack-latencies/${params.fromRack}/${params.brokerRack}${query}`,
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        return { latencyData: data };
-      } catch (error) {
-        console.error("Failed to fetch Ack latencies:", error);
-        return {
-          latencyData: { timestamps: [], percentiles: {} },
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    },
+    loader: ({ params, request }) => loadAckLatencies({ params, request }),
   },
 ]);
 

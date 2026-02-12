@@ -1,4 +1,4 @@
-import { useLoaderData, Link, useRevalidator } from "react-router";
+import {useLoaderData, Link, useRevalidator, useNavigation} from "react-router";
 import {
   Card,
   Text,
@@ -38,20 +38,19 @@ function Explanation({ content }: { content: string }) {
 // Message Path Card Component - Reusable for both E2E and Ack paths
 function MessagePathCard({
   path,
-  to,
+  to, latencyMs = 0,
   latencyColor = "var(--mantine-color-green-6)",
   showToRack = true,
-  hideLatency = false,
 }: {
   path: MessagePath;
   to: string;
-  hideLatency?: boolean;
+  latencyMs?: number | null;
   showToRack?: boolean;
   latencyColor?: string;
 }) {
   return (
     <Link to={to} style={{ textDecoration: "none" }}>
-      <Card withBorder p={"md"} shadow="md" radius={"lg"}>
+      <Card withBorder p={"md"} shadow="md" radius={"lg"} className={classes.card}>
         <Stack gap={"md"} style={{ fontSize: "var(--mantine-font-size-sm)" }}>
           <Stack>
             <Group justify="space-between">
@@ -69,7 +68,7 @@ function MessagePathCard({
               </Group>
             )}
           </Stack>
-          {hideLatency || (
+          {latencyMs == null || (
             <Text
               size="xs"
               c="dimmed"
@@ -79,7 +78,7 @@ function MessagePathCard({
               latest p99:{" "}
               <span style={{ color: latencyColor }}>
                 {" "}
-                {Math.round(path.latestP99latency)} ms
+                {Math.round(latencyMs)} ms
               </span>
             </Text>
           )}
@@ -95,6 +94,8 @@ export function MessagePathsDashboard() {
     error?: string;
     lastUpdated?: string;
   };
+  const navigation = useNavigation();
+  const isLoading = navigation.state === "loading";
 
   const ackPaths = messagePaths.filter(
     (mp) =>
@@ -135,7 +136,7 @@ export function MessagePathsDashboard() {
     );
   }
 
-  if (!messagePaths) {
+  if (isLoading) {
     return (
       <Group justify="center" pt="xl">
         <Loader size="xl" />
@@ -167,6 +168,7 @@ export function MessagePathsDashboard() {
                 path={path}
                 to={`/e2e-latencies/${path.fromRack}/${path.viaBrokerRack}/${path.toRack}`}
                 showToRack={true}
+                latencyMs={path.latestP99latency}
                 latencyColor={latencyColor}
               />
             ))}
@@ -197,7 +199,7 @@ export function MessagePathsDashboard() {
                 to={`/ack-latencies/${path.fromRack}/${path.viaBrokerRack}`}
                 showToRack={false}
                 latencyColor={latencyColor}
-                hideLatency={true}
+                latencyMs={path.latestP99AckLatency}
               />
             ))}
           </SimpleGrid>
