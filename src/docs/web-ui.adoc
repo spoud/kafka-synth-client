@@ -1,8 +1,8 @@
-== Web UI
+=== Web UI
 
 The Kafka Synth Client includes a built-in web interface that provides real-time visualization of latency metrics and message paths across your Kafka cluster.
 
-=== Accessing the Web UI
+==== Accessing the Web UI
 
 The web UI is available on port `8080` of the synth client deployment. When running with docker-compose, you can access it at:
 
@@ -12,11 +12,11 @@ http://localhost:8080
 
 When deployed to Kubernetes, the web UI can be exposed through an ingress or service. See the `examples/strimzi.yaml` file for a complete example including ingress configuration.
 
-=== Features
+==== Features
 
 The web UI provides three main dashboards:
 
-==== Message Paths Dashboard
+===== Message Paths Dashboard
 
 The home dashboard displays all active message paths in your Kafka cluster, showing:
 
@@ -29,7 +29,7 @@ Each path card shows:
 - Current latency in milliseconds with color coding (green for healthy, red for high latency)
 - Interactive hover information
 
-==== E2E Latency Dashboard
+===== E2E Latency Dashboard
 
 Clicking on an E2E latency path takes you to a detailed dashboard showing:
 
@@ -38,7 +38,7 @@ Clicking on an E2E latency path takes you to a detailed dashboard showing:
 - Interactive charts with hoverable data points
 - Multiple percentiles (median, 80th, 90th, 95th, 99th)
 
-==== Ack Latency Dashboard
+===== Ack Latency Dashboard
 
 Clicking on an Ack latency path shows detailed acknowledgement latency metrics:
 
@@ -47,7 +47,7 @@ Clicking on an Ack latency path shows detailed acknowledgement latency metrics:
 - Percentile breakdowns
 - Time range selection
 
-=== Multi-DC Setup
+==== Multi-DC Setup
 
 When using the `multi-dc-docker-compose.yaml` setup, each synth client instance has its own web UI exposed on different ports:
 
@@ -87,7 +87,7 @@ When using the `multi-dc-docker-compose.yaml` setup, each synth client instance 
 
 This allows you to view latency data from the perspective of each individual rack or datacenter location.
 
-=== Technology Stack
+==== Technology Stack
 
 The web UI is built with:
 
