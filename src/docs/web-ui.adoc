@@ -2,6 +2,9 @@
 
 The Kafka Synth Client includes a built-in web interface that provides real-time visualization of latency metrics and message paths across your Kafka cluster.
 
+.Web UI Message Paths Dashboard
+image::img/ui-message-paths.png[Web UI showing message paths with latency metrics]
+
 ==== Accessing the Web UI
 
 The web UI is available on port `8081` of the synth client deployment (the same port that serves Prometheus metrics). When running with docker-compose, you can access it at:
@@ -37,6 +40,9 @@ Clicking on an E2E latency path takes you to a detailed dashboard showing:
 - Configurable time ranges (last 5 minutes to 24 hours)
 - Interactive charts with hoverable data points
 - Multiple percentiles (median, 80th, 90th, 95th, 99th)
+
+.E2E Latency Chart with Time Series Data
+image::img/ui-latency-chart.png[Latency dashboard showing historical trends and percentiles]
 
 ===== Ack Latency Dashboard
 
