@@ -29,7 +29,7 @@ The home dashboard displays all active message paths in your Kafka cluster, show
 - **Acknowledgement (Ack) Latency Paths**: Direct paths from producer to broker showing acknowledgement latencies
 
 Each path card shows:
-- Source and destination racks
+- Source and (in the case of E2E-latencies) destination racks
 - Broker rack (via rack)
 - Current latency in milliseconds
 - Interactive hover information
