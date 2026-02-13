@@ -5,6 +5,8 @@ The Kafka Synth Client includes a built-in web interface that provides real-time
 .Web UI Message Paths Dashboard
 image::img/ui-message-paths.png[Web UI showing message paths with latency metrics]
 
+NOTE: Screenshot images are available in PR #72 and need to be added to the repository. See `src/docs/img/README-screenshots.md` for download instructions.
+
 ==== Accessing the Web UI
 
 The web UI is available on port `8081` of the synth client deployment (the same port that serves Prometheus metrics). When running with docker-compose, you can access it at:
