@@ -4,10 +4,10 @@ The Kafka Synth Client includes a built-in web interface that provides real-time
 
 ==== Accessing the Web UI
 
-The web UI is available on port `8080` of the synth client deployment. When running with docker-compose, you can access it at:
+The web UI is available on port `8081` of the synth client deployment (the same port that serves Prometheus metrics). When running with docker-compose, you can access it at:
 
 ```
-http://localhost:8080
+http://localhost:8081
 ```
 
 When deployed to Kubernetes, the web UI can be exposed through an ingress or service. See the `examples/strimzi.yaml` file for a complete example including ingress configuration.
@@ -51,38 +51,32 @@ Clicking on an Ack latency path shows detailed acknowledgement latency metrics:
 
 When using the `multi-dc-docker-compose.yaml` setup, each synth client instance has its own web UI exposed on different ports:
 
-.Synth Client UI Ports for ack=all configuration
+.Synth Client Ports for ack=all configuration
 |===
-|Instance |Metrics Port |Web UI Port
+|Instance |Port (UI & Metrics)
 
 |rack0
 |18088
-|18080
 
 |rack1
 |28088
-|28080
 
 |rack2
 |38088
-|38080
 |===
 
-.Synth Client UI Ports for ack=1 configuration
+.Synth Client Ports for ack=1 configuration
 |===
-|Instance |Metrics Port |Web UI Port
+|Instance |Port (UI & Metrics)
 
 |rack0
 |18089
-|18081
 
 |rack1
 |28089
-|28081
 
 |rack2
 |38089
-|38081
 |===
 
 This allows you to view latency data from the perspective of each individual rack or datacenter location.
@@ -91,7 +85,7 @@ This allows you to view latency data from the perspective of each individual rac
 
 The web UI is built with:
 
-- React 19
+- React
 - Mantine UI components
 - React Router for navigation
 - Recharts for data visualization

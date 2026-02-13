@@ -1,6 +1,6 @@
 # This file illustrates how to use the synth client with a Strimzi cluster.
 # It defines a kafka user for the synth client, a topic to write to, and a deployment of the client itself.
-# The metrics are exposed on port 8081 (this port is also exposed via a service).
+# The UI and metrics are exposed on port 8081 (this port is also exposed via a service and ingress).
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaUser
 metadata:
@@ -67,8 +67,6 @@ spec:
         resources: {}
         ports:
         - containerPort: 8081
-          name: prometheus
-        - containerPort: 8080
           name: http
         env:
         - name: SYNTH_CLIENT_TOPIC
@@ -97,10 +95,6 @@ spec:
   - port: 8081
     protocol: TCP
     targetPort: 8081
-    name: prometheus
-  - port: 8080
-    protocol: TCP
-    targetPort: 8080
     name: http
   selector:
     app: synth-client
@@ -122,4 +116,4 @@ spec:
           service:
             name: synth-client
             port:
-              number: 8080
+              number: 8081
