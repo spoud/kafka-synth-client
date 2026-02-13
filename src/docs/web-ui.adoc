@@ -41,7 +41,7 @@ Clicking on an E2E latency path takes you to a detailed dashboard showing:
 - Historical latency trends over time
 - Configurable time ranges (last 5 minutes to 24 hours)
 - Interactive charts with hoverable data points
-- Multiple percentiles (median, 80th, 90th, 95th, 99th)
+- Multiple percentiles 
 
 .E2E Latency Chart with Time Series Data
 image::img/ui-latency-chart.png[Latency dashboard showing historical trends and percentiles]
