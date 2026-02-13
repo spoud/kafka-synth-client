@@ -31,7 +31,7 @@ The home dashboard displays all active message paths in your Kafka cluster, show
 Each path card shows:
 - Source and destination racks
 - Broker rack (via rack)
-- Current latency in milliseconds with color coding (green for healthy, red for high latency)
+- Current latency in milliseconds
 - Interactive hover information
 
 ===== E2E Latency Dashboard
