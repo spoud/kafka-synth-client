@@ -89,6 +89,10 @@ When using the `multi-dc-docker-compose.yaml` setup, each synth client instance 
 
 This allows you to view latency data from the perspective of each individual rack or datacenter location.
 
+==== Configuration
+
+Historical data for the last 7 days is stored in-memory inside a DuckDB. If you wish to retain this data across restarts of the synth client, override the `SYNTH_CLIENT_HISTORY_DATABASE_PATH` env variable to point to an actual path, e.g. `jdbc:duckdb:/my/volume/duck.db`. The default retention period of 7 days can be modified using the `SYNTH_CLIENT_HISTORY_RETENTION_PERIOD` environment variable (value must be a valid ISO-8601 duration like `PT2D`)
+
 ==== Technology Stack
 
 The web UI is built with:
