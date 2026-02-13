@@ -24,3 +24,14 @@ updates:
       docker-version:
         patterns:
           - "*"
+  - package-ecosystem: "npm"
+    directory: "/src/main/webui"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm-version:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
