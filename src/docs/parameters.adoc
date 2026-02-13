@@ -65,6 +65,14 @@ The preferred way to configure the client is to use environment variables. Below
 | 1.0
 | Maximum expected latency in milliseconds. Used to create histogram buckets when enabled.
 
+| `SYNTH_CLIENT_HISTORY_DATABASE_PATH`
+| jdbc:duckdb:
+| DuckDB connection url for storing historical latency data. Append a path (e.g. `jdbc:duckdb:/my/volume/duck.db`) to persist the data across restarts. By default, the database is in-memory and data will be lost when the client restarts.
+
+| `SYNTH_CLIENT_HISTORY_RETENTION_PERIOD`
+| P7D
+| How long to retain historical latency data. The value must be a valid ISO-8601 duration (e.g. `P2D` for 2 days).
+
 | `QUARKUS_HTTP_PORT`
 | 8081
 | The port on which the metrics endpoint will be exposed.
