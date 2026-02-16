@@ -124,6 +124,7 @@ jobs:
       - name: Attach SBOM attestation with cosign
         run: |
           set -euo pipefail
+          test -f sbom.json
           IMAGE_REF="${{ env.IMAGE_ID }}@${{ steps.docker_build.outputs.digest }}"
           echo "Attesting SBOM to ${IMAGE_REF}"
           cosign attest --yes --predicate sbom.json --type spdxjson "${IMAGE_REF}"

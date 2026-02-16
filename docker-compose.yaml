@@ -1,5 +1,8 @@
 services:
   redpanda-0:
+    profiles:
+      - dependencies
+      - all
     image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
     command:
       - redpanda
@@ -16,6 +19,9 @@ services:
       - --default-log-level=info
 
   console:
+    profiles:
+      - dependencies
+      - all
     image: docker.redpanda.com/redpandadata/console:v2.8.4
     entrypoint: /bin/sh
     command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml; /app/console'
@@ -30,6 +36,9 @@ services:
       - redpanda-0
 
   prometheus:
+    profiles:
+      - dependencies
+      - all
     image: prom/prometheus:latest
     ports:
       - 9090:9090
@@ -39,6 +48,8 @@ services:
       - kafka-synth-client
 
   kafka-synth-client:
+    profiles:
+      - all
     image: spoud/kafka-synth-client:latest
     build:
       context: .

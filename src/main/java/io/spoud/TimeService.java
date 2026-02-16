@@ -14,6 +14,7 @@ import org.eclipse.microprofile.faulttolerance.Retry;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 
 @ApplicationScoped
@@ -29,6 +30,10 @@ public class TimeService {
 
     public long currentTimeMillis() {
         return System.currentTimeMillis() + clockOffset.get();
+    }
+
+    public OffsetDateTime now() {
+        return OffsetDateTime.now().plusNanos(clockOffset.get() * 1_000_000);
     }
 
     public long getClockOffset() {

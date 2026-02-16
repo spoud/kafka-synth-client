@@ -108,6 +108,10 @@ public class MetricService {
         }
     }
 
+    public Collection<WrappedDistributionSummary> getE2ELatencies() {
+        return e2eLatencies.values();
+    }
+
     public void recordAckLatency(String topic, int partition, Duration between) {
         Log.debugv("Ack latency for partition {0}: {1}ms", partition, between.toMillis());
         if (partitionRebalancer.isInitialRefreshPending()) {
@@ -176,6 +180,10 @@ public class MetricService {
                 .register(meterRegistry), broker);
     }
 
+    public Collection<WrappedDistributionSummary> getAckLatencies() {
+        return ackLatenciesByPartition.values();
+    }
+
     private Collection<ObjectName> getAvailableMBeanNames() {
         try {
             return ManagementFactory.getPlatformMBeanServer().queryNames(null, null);
@@ -185,7 +193,7 @@ public class MetricService {
         }
     }
 
-    private record WrappedDistributionSummary(DistributionSummary distributionSummary, String broker) {
+    public record WrappedDistributionSummary(DistributionSummary distributionSummary, String broker) {
     }
 
     private record PartitionRackPair(int partition, String rack) {
