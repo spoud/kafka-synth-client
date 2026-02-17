@@ -23,7 +23,7 @@ public class IndexRoute {
     @GET
     @Produces(MediaType.TEXT_HTML)
     public String index() {
-        return index.data("rootPath", rootPath).render();
+        return index.data("rootPath", rootPath.equals("/") ? "" : rootPath).render();
     }
 
     /* SPA ROUTING */
