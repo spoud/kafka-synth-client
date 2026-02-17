@@ -14,10 +14,11 @@ import { E2ELatencyDashboard } from "./components/E2ELatencyDashboard";
 import { AckLatencyDashboard } from "./components/AckLatencyDashboard";
 import { loadMessagePaths } from "./loaders/messagePathsLoader";
 import { loadE2ELatencies, loadAckLatencies } from "./loaders/latencyLoaders";
+import { withBaseURI } from "./utils/baseUtil.ts";
 
 let router = createBrowserRouter([
   {
-    path: "/",
+    path: withBaseURI("/"),
     element: (
       <AppShell>
         <MessagePathsDashboard />
@@ -26,7 +27,7 @@ let router = createBrowserRouter([
     loader: loadMessagePaths,
   },
   {
-    path: "/e2e-latencies/:fromRack/:viaRack/:toRack",
+    path: withBaseURI("/e2e-latencies/:fromRack/:viaRack/:toRack"),
     element: (
       <AppShell>
         <E2ELatencyDashboard />
@@ -35,7 +36,7 @@ let router = createBrowserRouter([
     loader: ({ params, request }) => loadE2ELatencies({ params, request }),
   },
   {
-    path: "/ack-latencies/:fromRack/:brokerRack",
+    path: withBaseURI("/ack-latencies/:fromRack/:brokerRack"),
     element: (
       <AppShell>
         <AckLatencyDashboard />

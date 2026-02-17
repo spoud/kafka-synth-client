@@ -69,3 +69,7 @@ nb-configuration.xml
 # TLS Certificates
 .certs/
 
+# Vite build output
+src/main/resources/templates/*.html
+src/main/resources/META-INF/resources/assets
+

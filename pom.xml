@@ -92,9 +92,12 @@
             <version>3.12.0</version>
         </dependency>
         <dependency>
-            <groupId>io.quarkiverse.quinoa</groupId>
-            <artifactId>quarkus-quinoa</artifactId>
-            <version>2.7.1</version>
+            <groupId>io.quarkiverse.qute.web</groupId>
+            <artifactId>quarkus-qute-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-reactive-routes</artifactId>
         </dependency>
         <dependency>
             <groupId>org.duckdb</groupId>

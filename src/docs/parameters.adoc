@@ -73,6 +73,10 @@ The preferred way to configure the client is to use environment variables. Below
 | P7D
 | How long to retain historical latency data. The value must be a valid ISO-8601 duration (e.g. `P2D` for 2 days).
 
+| `QUARKUS_HTTP_ROOT_PATH`
+| /
+| Context path of the application. All endpoints (e.g. `/q/metrics`) will be relative to this path.
+
 | `QUARKUS_HTTP_PORT`
 | 8081
 | The port on which the metrics endpoint will be exposed.
