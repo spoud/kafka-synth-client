@@ -31,6 +31,11 @@ class TimeServiceTest {
             }
 
             @Override
+            public String contextPath() {
+                return "/";
+            }
+
+            @Override
             public String rack() {
                 return null;
             }
