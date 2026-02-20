@@ -1,4 +1,9 @@
-import {useLoaderData, Link, useRevalidator, useNavigation} from "react-router";
+import {
+  useLoaderData,
+  Link,
+  useRevalidator,
+  useNavigation,
+} from "react-router";
 import {
   Card,
   Text,
@@ -38,7 +43,8 @@ function Explanation({ content }: { content: string }) {
 // Message Path Card Component - Reusable for both E2E and Ack paths
 function MessagePathCard({
   path,
-  to, latencyMs = 0,
+  to,
+  latencyMs = 0,
   latencyColor = "var(--mantine-color-green-6)",
   showToRack = true,
 }: {
@@ -50,7 +56,13 @@ function MessagePathCard({
 }) {
   return (
     <Link to={to} style={{ textDecoration: "none" }}>
-      <Card withBorder p={"md"} shadow="md" radius={"lg"} className={classes.card}>
+      <Card
+        withBorder
+        p={"md"}
+        shadow="md"
+        radius={"lg"}
+        className={classes.card}
+      >
         <Stack gap={"md"} style={{ fontSize: "var(--mantine-font-size-sm)" }}>
           <Stack>
             <Group justify="space-between">
