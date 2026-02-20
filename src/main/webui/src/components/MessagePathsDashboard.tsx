@@ -1,4 +1,9 @@
-import {useLoaderData, Link, useRevalidator, useNavigation} from "react-router";
+import {
+  useLoaderData,
+  Link,
+  useRevalidator,
+  useNavigation,
+} from "react-router";
 import {
   Card,
   Text,
@@ -18,7 +23,7 @@ import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 
 import classes from "./MessagePathsDashboard.module.css";
-import {withBaseURI} from "../utils/baseUtil.ts";
+import { withBaseURI } from "../utils/baseUtil.ts";
 
 // Explanation Component - Displays help icon with hoverable explanation
 function Explanation({ content }: { content: string }) {
@@ -39,7 +44,8 @@ function Explanation({ content }: { content: string }) {
 // Message Path Card Component - Reusable for both E2E and Ack paths
 function MessagePathCard({
   path,
-  to, latencyMs = 0,
+  to,
+  latencyMs = 0,
   latencyColor = "var(--mantine-color-green-6)",
   showToRack = true,
 }: {
@@ -51,7 +57,13 @@ function MessagePathCard({
 }) {
   return (
     <Link to={to} style={{ textDecoration: "none" }}>
-      <Card withBorder p={"md"} shadow="md" radius={"lg"} className={classes.card}>
+      <Card
+        withBorder
+        p={"md"}
+        shadow="md"
+        radius={"lg"}
+        className={classes.card}
+      >
         <Stack gap={"md"} style={{ fontSize: "var(--mantine-font-size-sm)" }}>
           <Stack>
             <Group justify="space-between">
@@ -167,7 +179,9 @@ export function MessagePathsDashboard() {
               <MessagePathCard
                 key={`${path.fromRack}-${path.viaBrokerRack}-${path.toRack}`}
                 path={path}
-                to={withBaseURI(`/e2e-latencies/${path.fromRack}/${path.viaBrokerRack}/${path.toRack}`)}
+                to={withBaseURI(
+                  `/e2e-latencies/${path.fromRack}/${path.viaBrokerRack}/${path.toRack}`,
+                )}
                 showToRack={true}
                 latencyMs={path.latestP99latency}
                 latencyColor={latencyColor}
@@ -197,7 +211,9 @@ export function MessagePathsDashboard() {
               <MessagePathCard
                 key={`${path.fromRack}-${path.viaBrokerRack}`}
                 path={path}
-                to={withBaseURI(`/ack-latencies/${path.fromRack}/${path.viaBrokerRack}`)}
+                to={withBaseURI(
+                  `/ack-latencies/${path.fromRack}/${path.viaBrokerRack}`,
+                )}
                 showToRack={false}
                 latencyColor={latencyColor}
                 latencyMs={path.latestP99AckLatency}

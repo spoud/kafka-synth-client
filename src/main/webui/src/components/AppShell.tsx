@@ -9,7 +9,7 @@ import {
 } from "@mantine/core";
 import { IconSun, IconMoon } from "@tabler/icons-react";
 import { Link } from "react-router";
-import {withBaseURI} from "../utils/baseUtil.ts";
+import { withBaseURI } from "../utils/baseUtil.ts";
 
 export function AppShell({ children }: { children: any }) {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
