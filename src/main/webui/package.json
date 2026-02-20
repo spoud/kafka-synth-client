@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3001 --host",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && mv -f ./dist/index.html ../resources/templates/index.html && cp -R ./dist/assets ../resources/META-INF/resources",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "playwright test"
