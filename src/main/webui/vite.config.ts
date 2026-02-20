@@ -7,5 +7,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     open: true,
+    proxy: {
+      "^/history/.*": {
+        target: "http://localhost:8081",
+      }
+    }
   },
 });

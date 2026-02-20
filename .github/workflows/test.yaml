@@ -32,6 +32,15 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: 'src/main/webui/.nvmrc'
+      - name: Install Node Dependencies
+        working-directory: src/main/webui
+        run: npm install
+      - name: Build Web UI
+        working-directory: src/main/webui
+        run: npm run build
       - name: Run Unit Tests
         run: mvn clean test
       - name: Test Building Container Image

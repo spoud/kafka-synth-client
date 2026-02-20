@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3001 --host",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && mv -f ./dist/index.html ../resources/templates/index.html && cp -R ./dist/assets ../resources/META-INF/resources",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "playwright test"
@@ -26,7 +26,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.58.2",
-    "@types/node": "^24.10.1",
+    "@types/node": "^25.2.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",

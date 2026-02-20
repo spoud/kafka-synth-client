@@ -1,9 +1,9 @@
 // Shared loader for message paths data
-// Used by both the overview page and flow visualization
+import { withBaseURI } from "../utils/baseUtil.ts";
 
 export async function loadMessagePaths() {
   try {
-    const response = await fetch("/history/message-paths");
+    const response = await fetch(withBaseURI("/history/message-paths"));
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
