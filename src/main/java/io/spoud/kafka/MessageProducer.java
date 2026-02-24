@@ -39,6 +39,7 @@ public class MessageProducer implements HealthCheck {
     private KafkaProducer<Long, byte[]> producer;
 
     public static final String HEADER_RACK = "rack";
+    public static final String HEADER_ADVERTISED_LISTENER = "listener";
 
     public MessageProducer(KafkaFactory kafkaFactory, SynthClientConfig config,
                            MetricService metricService, TimeService timeService,
@@ -80,6 +81,7 @@ public class MessageProducer implements HealthCheck {
         Instant send = Instant.now();
         var record = new ProducerRecord<>(config.topic(), null, timeService.currentTimeMillis(), key, value);
         record.headers().add(HEADER_RACK, config.rack().getBytes());
+        record.headers().add(HEADER_ADVERTISED_LISTENER, config.advertisedListener().orElse("").getBytes());
         producer.send(record, (metadata, exception) -> {
             if (exception != null) {
                 Log.error("Failed to send message", exception);

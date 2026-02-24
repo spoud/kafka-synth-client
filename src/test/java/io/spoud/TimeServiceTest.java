@@ -36,6 +36,11 @@ class TimeServiceTest {
             }
 
             @Override
+            public Optional<String> advertisedListener() {
+                return Optional.empty();
+            }
+
+            @Override
             public String rack() {
                 return null;
             }

@@ -10,7 +10,7 @@ export default defineConfig({
     proxy: {
       "^/history/.*": {
         target: "http://localhost:8081",
-      }
-    }
+      },
+    },
   },
 });

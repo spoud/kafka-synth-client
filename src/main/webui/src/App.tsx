@@ -12,7 +12,7 @@ import "@mantine/core/styles.css";
 import "@mantine/charts/styles.css";
 import "@mantine/dates/styles.css";
 
-import { MantineProvider } from "@mantine/core";
+import { Center, Loader, MantineProvider } from "@mantine/core";
 import { AppShell } from "./components/AppShell";
 import { MessagePathsDashboard } from "./components/MessagePathsDashboard";
 import { E2ELatencyDashboard } from "./components/E2ELatencyDashboard";
@@ -20,6 +20,7 @@ import { AckLatencyDashboard } from "./components/AckLatencyDashboard";
 import { loadMessagePaths } from "./loaders/messagePathsLoader";
 import { loadE2ELatencies, loadAckLatencies } from "./loaders/latencyLoaders";
 import { withBaseURI } from "./utils/baseUtil.ts";
+import { rackUrlContext, type RackUrlLoaderData } from "./loaders/rackUrls.ts";
 
 function RootErrorBoundary() {
   let error = useRouteError();
@@ -49,14 +50,43 @@ function RootErrorBoundary() {
 
 let router = createBrowserRouter([
   {
+    HydrateFallback: () => (
+      <Center m={"xl"}>
+        <Loader />
+      </Center>
+    ),
     path: withBaseURI("/"),
     ErrorBoundary: RootErrorBoundary,
+    middleware: [
+      async ({ context }) => {
+        const listeners = await fetch(withBaseURI("/history/other-racks"));
+        let ctx: RackUrlLoaderData;
+        if (!listeners.ok) {
+          ctx = {
+            rackUrls: {},
+            error: `Failed to fetch synth-client endpoints: server responded with status ${listeners.statusText}`,
+          };
+        } else {
+          try {
+            ctx = {
+              rackUrls: (await listeners.json()) as Record<string, string>,
+              lastFetched: Date.now(),
+            };
+          } catch (e) {
+            ctx = {
+              rackUrls: {},
+              error: `Failed to parse rack URLs: ${e}`,
+            };
+          }
+        }
+        context.set(rackUrlContext, ctx);
+      },
+    ],
     element: (
       <AppShell>
         <Outlet />
       </AppShell>
     ),
-    loader: loadMessagePaths,
     children: [
       {
         index: true,
@@ -66,12 +96,12 @@ let router = createBrowserRouter([
       {
         path: "e2e-latencies/:fromRack/:viaRack/:toRack",
         element: <E2ELatencyDashboard />,
-        loader: ({ params, request }) => loadE2ELatencies({ params, request }),
+        loader: (params) => loadE2ELatencies(params),
       },
       {
         path: "ack-latencies/:fromRack/:brokerRack",
         element: <AckLatencyDashboard />,
-        loader: ({ params, request }) => loadAckLatencies({ params, request }),
+        loader: (params) => loadAckLatencies(params),
       },
     ],
   },
