@@ -156,7 +156,6 @@ services:
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackall
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=-1
       - SYNTH_CLIENT_RACK=bern
-      - SYNTH_CLIENT_ADVERTISED_LISTENER=http://localhost:18088
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -181,7 +180,6 @@ services:
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackall
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=-1
       - SYNTH_CLIENT_RACK=olten
-      - SYNTH_CLIENT_ADVERTISED_LISTENER=http://localhost:28088
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -205,7 +203,6 @@ services:
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackall
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=-1
       - SYNTH_CLIENT_RACK=basel
-      - SYNTH_CLIENT_ADVERTISED_LISTENER=http://localhost:38088
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -231,7 +228,6 @@ services:
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=1
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackone
       - SYNTH_CLIENT_RACK=bern
-      - SYNTH_CLIENT_ADVERTISED_LISTENER=http://localhost:18089
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -256,7 +252,6 @@ services:
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=1
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackone
       - SYNTH_CLIENT_RACK=olten
-      - SYNTH_CLIENT_ADVERTISED_LISTENER=http://localhost:28089
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -281,7 +276,6 @@ services:
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=1
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackone
       - SYNTH_CLIENT_RACK=basel
-      - SYNTH_CLIENT_ADVERTISED_LISTENER=http://localhost:38089
     depends_on:
       redpanda-0:
         condition: service_healthy

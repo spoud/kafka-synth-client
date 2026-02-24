@@ -17,6 +17,7 @@ interface LatencyLoaderParams {
  * Generic latency loader that handles the common logic for both E2E and Ack latencies
  * @param params Route parameters
  * @param request Request object
+ * @param context React Router context object
  * @param endpointType 'e2e' or 'ack' to determine which API endpoint to call
  * @returns Promise with latency data or error
  */

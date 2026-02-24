@@ -20,7 +20,7 @@ import { AckLatencyDashboard } from "./components/AckLatencyDashboard";
 import { loadMessagePaths } from "./loaders/messagePathsLoader";
 import { loadE2ELatencies, loadAckLatencies } from "./loaders/latencyLoaders";
 import { withBaseURI } from "./utils/baseUtil.ts";
-import { rackUrlContext, type RackUrlLoaderData } from "./loaders/rackUrls.ts";
+import { attachListenersToContext } from "./loaders/rackUrls.ts";
 
 function RootErrorBoundary() {
   let error = useRouteError();
@@ -57,31 +57,7 @@ let router = createBrowserRouter([
     ),
     path: withBaseURI("/"),
     ErrorBoundary: RootErrorBoundary,
-    middleware: [
-      async ({ context }) => {
-        const listeners = await fetch(withBaseURI("/history/other-racks"));
-        let ctx: RackUrlLoaderData;
-        if (!listeners.ok) {
-          ctx = {
-            rackUrls: {},
-            error: `Failed to fetch synth-client endpoints: server responded with status ${listeners.statusText}`,
-          };
-        } else {
-          try {
-            ctx = {
-              rackUrls: (await listeners.json()) as Record<string, string>,
-              lastFetched: Date.now(),
-            };
-          } catch (e) {
-            ctx = {
-              rackUrls: {},
-              error: `Failed to parse rack URLs: ${e}`,
-            };
-          }
-        }
-        context.set(rackUrlContext, ctx);
-      },
-    ],
+    middleware: [attachListenersToContext],
     element: (
       <AppShell>
         <Outlet />
