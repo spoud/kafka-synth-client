@@ -75,7 +75,7 @@ The preferred way to configure the client is to use environment variables. Below
 
 | `SYNTH_CLIENT_ADVERTISED_LISTENER`
 | _<optional>_
-| A public URL (must include the protocol, e.g. http://localhost:8081). The synth-client will advertise this URL as part of the Kafka messages it sends out. This will be used by the UI to pull metrics from all synth-client deployments.
+| A URL under which this synth client instance is accessible/resolvable via browser (must include the protocol, e.g. http://localhost:8081). The synth-client will advertise this URL as part of the Kafka messages it sends out. This will be used by the UI to pull metrics from all synth-client deployments.
 
 | `SYNTH_CLIENT_CONTEXT_PATH`
 | /
