@@ -22,6 +22,8 @@ public class MetricService {
     public static final String E2E_METER_NAME = "synth-client.e2e.latency";
     public static final String ACK_METER_NAME = "synth-client.ack.latency";
     public static final String TIME_SINCE_LAST_CONSUMPTION_METER_NAME = "synth-client.time-since-last-consumption";
+    public static final String RECORDS_PRODUCED_METER_NAME = "synth-client.producer.records-produced";
+    public static final String RECORDS_FAILED_METER_NAME = "synth-client.producer.records-failed";
 
     public static final String TAG_TOPIC = "topic";
     public static final String TAG_PARTITION = "partition";
@@ -42,6 +44,8 @@ public class MetricService {
     private final String kafkaClientId;
     private final AtomicReference<Instant> lastConsumptionTime = new AtomicReference<>(Instant.now());
     private final Map<Integer, Long> messagesConsumedPerPartition = new HashMap<>();
+    private Counter recordsProducedCounter;
+    private Counter recordsFailedCounter;
 
     public MetricService(MeterRegistry meterRegistry,
                          PartitionRebalancer partitionRebalancer,
@@ -55,6 +59,14 @@ public class MetricService {
                         MetricService::getMillisecondsSinceLastConsumption)
                 .tag(TAG_RACK, config.rack())
                 .register(meterRegistry);
+        recordsProducedCounter = Counter.builder(RECORDS_PRODUCED_METER_NAME)
+                .tag(TAG_RACK, config.rack())
+                .description("Total number of records successfully produced")
+                .register(meterRegistry);
+        recordsFailedCounter = Counter.builder(RECORDS_FAILED_METER_NAME)
+                .tag(TAG_RACK, config.rack())
+                .description("Total number of records that failed to produce")
+                .register(meterRegistry);
     }
 
     public <T> void addGauge(String name, Tags tags, T stateObject, ToDoubleFunction<T> valueFunction) {
@@ -67,6 +79,14 @@ public class MetricService {
 
     public void recordConsumptionTime() {
         lastConsumptionTime.updateAndGet(inst -> Instant.now().isAfter(inst) ? Instant.now() : inst);
+    }
+
+    public void recordProducedSuccess() {
+        recordsProducedCounter.increment();
+    }
+
+    public void recordProducedFailure() {
+        recordsFailedCounter.increment();
     }
 
     synchronized public void recordLatency(String topic, int partition, long latencyMs, String fromRack) {

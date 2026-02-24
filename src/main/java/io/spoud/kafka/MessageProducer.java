@@ -85,10 +85,12 @@ public class MessageProducer implements HealthCheck {
         producer.send(record, (metadata, exception) -> {
             if (exception != null) {
                 Log.error("Failed to send message", exception);
+                metricService.recordProducedFailure();
             } else {
                 Instant ack = Instant.now();
                 lastMessage.set(ack);
                 metricService.recordAckLatency(metadata.topic(), metadata.partition(), Duration.between(send, ack));
+                metricService.recordProducedSuccess();
             }
         });
     }

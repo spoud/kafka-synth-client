@@ -117,4 +117,29 @@ public class KafkaSynthClientTest {
             assertThat(metrics).contains("synth_client_time_since_last_consumption_seconds{rack=\"dc1\"}");
         });
     }
+
+    @Test
+    @DisplayName("Records produced counter is recorded")
+    public void testRecordsProducedCounterRecorded() {
+        kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
+                .fromTopics(config.topic(), 30)
+                .awaitCompletion(Duration.ofSeconds(5));
+
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            var metrics = RestAssured.get("/q/metrics").asString();
+            assertThat(metrics).contains("synth_client_producer_records_produced_total{rack=\"dc1\"}");
+            assertThat(metrics).doesNotContain("synth_client_producer_records_produced_total{rack=\"dc1\"} 0.0");
+        });
+
+        lifecycle.shutdown();
+    }
+
+    @Test
+    @DisplayName("Records failed counter is recorded")
+    public void testRecordsFailedCounterRecorded() {
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            var metrics = RestAssured.get("/q/metrics").asString();
+            assertThat(metrics).contains("synth_client_producer_records_failed_total{rack=\"dc1\"}");
+        });
+    }
 }
