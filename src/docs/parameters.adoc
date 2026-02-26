@@ -73,6 +73,10 @@ The preferred way to configure the client is to use environment variables. Below
 | P7D
 | How long to retain historical latency data. The value must be a valid ISO-8601 duration (e.g. `P2D` for 2 days).
 
+| `SYNTH_CLIENT_ADVERTISED_LISTENER`
+| _<optional>_
+| A URL under which this synth client instance is accessible/resolvable via browser (must include the protocol, e.g. http://localhost:8081). The synth-client will advertise this URL as part of the Kafka messages it sends out. This will be used by the UI to pull metrics from all synth-client deployments.
+
 | `SYNTH_CLIENT_CONTEXT_PATH`
 | /
 | Context path of the application. All endpoints (e.g. `/q/metrics`) will be relative to this path.

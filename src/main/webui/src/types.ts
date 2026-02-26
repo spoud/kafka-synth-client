@@ -1,6 +1,7 @@
 // TypeScript interfaces for Kafka Synth Client API responses
 
 export interface MessagePath {
+  queryUrl?: string;
   fromRack: string;
   toRack: string;
   viaBrokerRack: string;

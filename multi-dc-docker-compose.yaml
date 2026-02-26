@@ -22,7 +22,7 @@ services:
       - --smp 1
       - --default-log-level=info
       - --set redpanda.auto_create_topics_enabled=0
-      - --set redpanda.rack=rack0
+      - --set redpanda.rack=bern
     image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
     container_name: redpanda-0
     volumes:
@@ -57,7 +57,7 @@ services:
       - --default-log-level=info
       - --seeds redpanda-0:33145
       - --set redpanda.auto_create_topics_enabled=0
-      - --set redpanda.rack=rack1
+      - --set redpanda.rack=olten
 
     image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
     container_name: redpanda-1
@@ -95,7 +95,7 @@ services:
       - --default-log-level=info
       - --seeds redpanda-0:33145
       - --set redpanda.auto_create_topics_enabled=0
-      - --set redpanda.rack=rack2
+      - --set redpanda.rack=basel
     image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
     container_name: redpanda-2
     volumes:
@@ -155,7 +155,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=redpanda-0:9092
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackall
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=-1
-      - SYNTH_CLIENT_RACK=rack0
+      - SYNTH_CLIENT_RACK=bern
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -179,7 +179,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=redpanda-1:9092
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackall
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=-1
-      - SYNTH_CLIENT_RACK=rack1
+      - SYNTH_CLIENT_RACK=olten
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -202,7 +202,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=redpanda-2:9092
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackall
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=-1
-      - SYNTH_CLIENT_RACK=rack2
+      - SYNTH_CLIENT_RACK=basel
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -227,7 +227,7 @@ services:
       - KAFKA_ACKS=1
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=1
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackone
-      - SYNTH_CLIENT_RACK=rack0
+      - SYNTH_CLIENT_RACK=bern
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -251,7 +251,7 @@ services:
       - KAFKA_ACKS=1
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=1
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackone
-      - SYNTH_CLIENT_RACK=rack1
+      - SYNTH_CLIENT_RACK=olten
     depends_on:
       redpanda-0:
         condition: service_healthy
@@ -275,7 +275,7 @@ services:
       - KAFKA_ACKS=1
       - SYNTH_CLIENT_TOPIC_REPLICATION_FACTOR=1
       - SYNTH_CLIENT_TOPIC=kafka-synth-client-test-ackone
-      - SYNTH_CLIENT_RACK=rack2
+      - SYNTH_CLIENT_RACK=basel
     depends_on:
       redpanda-0:
         condition: service_healthy

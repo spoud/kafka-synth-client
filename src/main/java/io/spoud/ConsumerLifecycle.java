@@ -29,10 +29,11 @@ public class ConsumerLifecycle implements HealthCheck {
     public ConsumerLifecycle(SynthClientConfig config,
                              KafkaFactory kafkaFactory,
                              MetricService metricService,
+                             AdvertisedListenerRepository advertisedListenerRepository,
                              TimeService timeService) {
         this.executorService = Executors.newFixedThreadPool(config.consumersCount(), new NamedThreadFactory("kafka-consumer"));
         this.consumers = IntStream.range(0, config.consumersCount())
-                .mapToObj(i -> new MessageConsumer(i, kafkaFactory, config, metricService, timeService))
+                .mapToObj(i -> new MessageConsumer(i, kafkaFactory, config, metricService, timeService, advertisedListenerRepository))
                 .toList();
     }
 

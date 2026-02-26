@@ -21,6 +21,7 @@ import { type MessagePath } from "../types";
 import { useInterval, useTimeout } from "@mantine/hooks";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
+import { loadMessagePaths } from "../loaders/messagePathsLoader.ts";
 
 import classes from "./MessagePathsDashboard.module.css";
 import { withBaseURI } from "../utils/baseUtil.ts";
@@ -102,11 +103,8 @@ function MessagePathCard({
 }
 
 export function MessagePathsDashboard() {
-  const { messagePaths, error, lastUpdated } = useLoaderData() as {
-    messagePaths: MessagePath[];
-    error?: string;
-    lastUpdated?: string;
-  };
+  const { messagePaths, lastUpdated, fetchFailures } =
+    useLoaderData<Awaited<ReturnType<typeof loadMessagePaths>>>();
   const navigation = useNavigation();
   const isLoading = navigation.state === "loading";
 
@@ -141,10 +139,18 @@ export function MessagePathsDashboard() {
     { autoInvoke: true },
   );
 
-  if (error) {
+  if (fetchFailures && fetchFailures.length > 0) {
     return (
-      <Alert icon={<IconAlertCircle size="1rem" />} title="Error" color="red">
-        {error}
+      <Alert
+        icon={<IconAlertCircle size="1rem" />}
+        title="Failed to fetch some data"
+        color="red"
+      >
+        {fetchFailures.map((failure, index) => (
+          <Text display={"block"} key={index}>
+            {failure}
+          </Text>
+        ))}
       </Alert>
     );
   }

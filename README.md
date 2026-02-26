@@ -1,10 +1,18 @@
 # kafka-synth-client
 
-A simple Kafka client (producer+consumer) that measures end-to-end latency of using Kafka.
+<p style="text-align: center">
+    <a href="https://spoud.github.io/kafka-synth-client/">📖 Documentation</a> | <a href="https://github.com/spoud/kafka-synth-client/pkgs/container/kafka-synth-client">📦 Packages</a>
+</p>
+
+Kafka-Synth-Client is a simple Kafka client (producer+consumer) that measures end-to-end latency of using Kafka.
 The latencies are measured by sending messages to the given Kafka topic via all the brokers, consuming them
 and measuring the time it took for the message to be produced and consumed.
 The recorded latencies are reported in prometheus format on a metrics endpoint (`/q/metrics`).
 The metrics contain values for the median, percentiles like 95th percentile, and 99th percentile of the latencies.
+
+The exposed metrics can be visualized in Grafana, but Kafka Synth Client also comes with a simple UI, allowing you to get started without any additional tools (Except, of course, your Kafka cluster)
+
+![ui-latency-chart.png](src/docs/img/ui-latency-chart.png)
 
 If the client is given the required ACLs, it will report latencies per broker.
 It is also able to automatically increase the number of partitions in a topic to match the number of brokers

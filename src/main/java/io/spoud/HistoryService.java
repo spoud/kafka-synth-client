@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Singleton
 @Path("/history")
@@ -22,10 +23,12 @@ public class HistoryService {
     private final TimeService timeService;
     private final DuckDBConnection conn;
     private final Duration retentionTime;
+    private final AdvertisedListenerRepository advertisedListenerRepository;
+    private final SynthClientConfig synthClientConfig;
 
     public HistoryService(MetricService metricService,
                           TimeService timeService,
-                          SynthClientConfig config) throws ClassNotFoundException, SQLException {
+                          SynthClientConfig config, AdvertisedListenerRepository advertisedListenerRepository, SynthClientConfig synthClientConfig) throws ClassNotFoundException, SQLException {
         this.metricService = metricService;
         this.timeService = timeService;
         this.retentionTime = config.historyRetentionPeriod();
@@ -37,6 +40,8 @@ public class HistoryService {
         conn.createStatement().execute("""
                 CREATE TABLE IF NOT EXISTS ack_latencies (timestamp TIMESTAMPTZ, rack VARCHAR, broker_rack VARCHAR, latency_ms REAL, percentile INT);
                 """);
+        this.advertisedListenerRepository = advertisedListenerRepository;
+        this.synthClientConfig = synthClientConfig;
     }
 
     @Scheduled(every = "15s", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
@@ -169,6 +174,16 @@ public class HistoryService {
             }
             return new LatencySummary(timestamps, percentiles);
         }
+    }
+
+    @GET
+    @Path("/other-racks")
+    public Map<String, String> getOtherRackUrls() {
+        return advertisedListenerRepository.getListeners()
+                .entrySet()
+                .stream()
+                .filter(e -> !e.getKey().equals(synthClientConfig.rack()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @GET

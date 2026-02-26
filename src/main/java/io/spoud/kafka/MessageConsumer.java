@@ -1,6 +1,7 @@
 package io.spoud.kafka;
 
 import io.quarkus.logging.Log;
+import io.spoud.AdvertisedListenerRepository;
 import io.spoud.MetricService;
 import io.spoud.TimeService;
 import io.spoud.config.SynthClientConfig;
@@ -29,6 +30,7 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
     private final int index;
     private final SynthClientConfig config;
     private final KafkaConsumer<Long, byte[]> consumer;
+    private final AdvertisedListenerRepository advertisedListenerRepository;
     private final MetricService metricService;
     private final TimeService timeService;
     private final AtomicBoolean running = new AtomicBoolean(true);
@@ -39,11 +41,13 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
                            KafkaFactory kafkaFactory,
                            SynthClientConfig config,
                            MetricService metricService,
-                           TimeService timeService) {
+                           TimeService timeService,
+                           AdvertisedListenerRepository advertisedListenerRepository) {
         this.index = index;
         this.config = config;
         this.metricService = metricService;
         this.timeService = timeService;
+        this.advertisedListenerRepository = advertisedListenerRepository;
         consumer = kafkaFactory.createConsumer();
     }
 
@@ -90,8 +94,15 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
                             .map(Header::value)
                             .map(String::new)
                             .orElse("unknown");
+                    String advertisedListener = Optional.of(message)
+                            .map(ConsumerRecord::headers)
+                            .map(h -> h.lastHeader(MessageProducer.HEADER_ADVERTISED_LISTENER))
+                            .map(Header::value)
+                            .map(String::new)
+                            .orElse(null);
                     metricService.recordConsumptionTime();
                     metricService.recordLatency(message.topic(), message.partition(), consumeTime - produceTime, fromRack);
+                    advertisedListenerRepository.mapRackToUrl(fromRack, advertisedListener);
                     lastReport.updateAndGet(last -> {
                         if (Duration.between(last, Instant.now()).getSeconds() > 10) {
                             Log.infov("Consumer {0}: {1} messages/second", index,counter.getAndSet(0) / 10.0);

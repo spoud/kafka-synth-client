@@ -1,6 +1,8 @@
 // Loaders for latency dashboard routes
 
-import { withBaseURI } from "../utils/baseUtil.ts";
+import { joinUrl, withBaseURI } from "../utils/baseUtil.ts";
+import type { LoaderFunctionArgs } from "react-router";
+import { rackUrlContext, type RackUrlLoaderData } from "./rackUrls.ts";
 
 interface LatencyLoaderParams {
   params: {
@@ -9,25 +11,29 @@ interface LatencyLoaderParams {
     toRack?: string;
     brokerRack?: string;
   };
-  request: Request;
 }
 
 /**
  * Generic latency loader that handles the common logic for both E2E and Ack latencies
  * @param params Route parameters
  * @param request Request object
+ * @param context React Router context object
  * @param endpointType 'e2e' or 'ack' to determine which API endpoint to call
  * @returns Promise with latency data or error
  */
 async function loadLatencies({
   params,
+  context,
   request,
   endpointType,
-}: LatencyLoaderParams & { endpointType: "e2e" | "ack" }) {
+}: LatencyLoaderParams & { endpointType: "e2e" | "ack" } & LoaderFunctionArgs) {
   try {
     const url = new URL(request.url);
     const intervalStart = url.searchParams.get("interval_start");
     const intervalEnd = url.searchParams.get("interval_end");
+
+    const rackUrls: RackUrlLoaderData = context.get(rackUrlContext);
+    const fetchUrl = rackUrls.rackUrls[params.toRack ?? params.fromRack!] ?? "";
 
     // Build query string for date range filtering
     let query = "";
@@ -48,7 +54,7 @@ async function loadLatencies({
       apiEndpoint = `/history/ack-latencies/${params.fromRack}/${params.brokerRack}${query}`;
     }
 
-    const response = await fetch(withBaseURI(apiEndpoint));
+    const response = await fetch(withBaseURI(joinUrl(fetchUrl, apiEndpoint)));
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -65,10 +71,22 @@ async function loadLatencies({
 }
 
 // Specific loader functions that use the generic loader
-export async function loadE2ELatencies(params: LatencyLoaderParams) {
-  return loadLatencies({ ...params, endpointType: "e2e" });
+export async function loadE2ELatencies(
+  params: LatencyLoaderParams & LoaderFunctionArgs,
+) {
+  return loadLatencies({
+    ...params,
+    endpointType: "e2e",
+    context: params.context,
+  });
 }
 
-export async function loadAckLatencies(params: LatencyLoaderParams) {
-  return loadLatencies({ ...params, endpointType: "ack" });
+export async function loadAckLatencies(
+  params: LatencyLoaderParams & LoaderFunctionArgs,
+) {
+  return loadLatencies({
+    ...params,
+    endpointType: "ack",
+    context: params.context,
+  });
 }

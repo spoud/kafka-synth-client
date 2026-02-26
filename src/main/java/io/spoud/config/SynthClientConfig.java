@@ -39,4 +39,6 @@ public interface SynthClientConfig {
     Duration historyRetentionPeriod();
 
     String contextPath();
+
+    Optional<String> advertisedListener();
 }
