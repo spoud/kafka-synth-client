@@ -1,5 +1,7 @@
 // Loaders for latency dashboard routes
 
+import { withBaseURI } from "../utils/baseUtil.ts";
+
 interface LatencyLoaderParams {
   params: {
     fromRack?: string;
@@ -44,7 +46,7 @@ async function loadLatencies({
       apiEndpoint = `/history/ack-latencies/${params.fromRack}/${params.brokerRack}${query}`;
     }
     
-    const response = await fetch(apiEndpoint);
+    const response = await fetch(withBaseURI(apiEndpoint));
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

@@ -37,4 +37,6 @@ public interface SynthClientConfig {
     String historyDatabasePath();
 
     Duration historyRetentionPeriod();
+
+    String contextPath();
 }
