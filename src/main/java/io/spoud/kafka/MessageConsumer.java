@@ -2,6 +2,7 @@ package io.spoud.kafka;
 
 import io.quarkus.logging.Log;
 import io.spoud.AdvertisedListenerRepository;
+import io.spoud.CommandService;
 import io.spoud.MetricService;
 import io.spoud.TimeService;
 import io.spoud.config.SynthClientConfig;
@@ -29,10 +30,11 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
 
     private final int index;
     private final SynthClientConfig config;
-    private final KafkaConsumer<Long, byte[]> consumer;
+    private final KafkaConsumer<Long, String> consumer;
     private final AdvertisedListenerRepository advertisedListenerRepository;
     private final MetricService metricService;
     private final TimeService timeService;
+    private final CommandService commandService;
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final AtomicReference<Instant> lastReport = new AtomicReference<>(Instant.now());
     private final AtomicLong counter = new AtomicLong(0);
@@ -42,12 +44,14 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
                            SynthClientConfig config,
                            MetricService metricService,
                            TimeService timeService,
-                           AdvertisedListenerRepository advertisedListenerRepository) {
+                           AdvertisedListenerRepository advertisedListenerRepository,
+                           CommandService commandService) {
         this.index = index;
         this.config = config;
         this.metricService = metricService;
         this.timeService = timeService;
         this.advertisedListenerRepository = advertisedListenerRepository;
+        this.commandService = commandService;
         consumer = kafkaFactory.createConsumer();
     }
 
@@ -84,8 +88,11 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
 
         try {
             while (running.get()) {
-                ConsumerRecords<Long, byte[]> records = consumer.poll(Duration.ofSeconds(1));
-                for (ConsumerRecord<Long, byte[]> message : records) {
+                ConsumerRecords<Long, String> records = consumer.poll(Duration.ofSeconds(1));
+                for (ConsumerRecord<Long, String> message : records) {
+                    if (message.value() != null && message.value().startsWith("{")) {
+                        commandService.maybeHandleCommand(message.value());
+                    }
                     long produceTime = message.timestamp();
                     long consumeTime = timeService.currentTimeMillis();
                     String fromRack = Optional.of(message)
