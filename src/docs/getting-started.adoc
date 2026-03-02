@@ -119,3 +119,26 @@ synth_client_producer_error_rate{rack="rack1",} 0.0
 The average per-second number of record sends that resulted in errors. An increase in this metric can indicate issues
 with reaching the Kafka cluster or issues with the Kafka cluster itself.
 This is another good candidate for alerting.
+
+==== Cumulative count of produced messages / produce errors
+
+```
+# HELP synth_client_producer_records_produced_total Total number of records successfully produced
+# TYPE synth_client_producer_records_produced_total counter
+synth_client_producer_records_produced_total{rack="synth-client-2",} 3029.0
+```
+
+```
+# HELP synth_client_producer_records_failed_total Total number of records that failed to produce
+# TYPE synth_client_producer_records_failed_total counter
+synth_client_producer_records_failed_total{rack="synth-client-2",} 0.0
+```
+
+These cumulative metrics enable a simple uptime calculation using the following formula:
+
+```
+uptime = records_produced_total / (records_produced_total + records_failed_total) * 100
+```
+
+The `uptime` then gives a rough estimate of the percentage of time that the Kafka cluster was available to the synth
+client in the given rack since the client started running.
