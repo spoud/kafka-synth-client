@@ -10,7 +10,9 @@ import io.smallrye.reactive.messaging.kafka.companion.KafkaCompanion;
 import io.spoud.config.SynthClientConfig;
 import io.spoud.kafka.PartitionRebalancer;
 import jakarta.inject.Inject;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.serialization.LongDeserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +39,12 @@ public class KafkaSynthClientTest {
     @Inject
     ConsumerLifecycle lifecycle;
 
+    @Inject
+    KafkaSynthClient kafkaSynthClient;
+
+    @Inject
+    CommandService commandService;
+
     @Test
     @DisplayName("Broker->Partition mapping is successfully generated")
     public void testPartitionBrokerMappingGenerated() {
@@ -53,7 +61,7 @@ public class KafkaSynthClientTest {
     @Test
     @DisplayName("End-to-end latency metrics are recorded")
     public void testEndToEndLatencyRecorded() {
-        kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
+        kafkaCompanion.consumeWithDeserializers(StringDeserializer.class)
                 .fromTopics(config.topic(), 30)
                 .awaitCompletion(Duration.ofSeconds(5));
 
@@ -70,7 +78,7 @@ public class KafkaSynthClientTest {
     @Test
     @DisplayName("Send-error-rate metrics are recorded")
     public void testSendErrorRateRecorded() {
-        kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
+        kafkaCompanion.consumeWithDeserializers(StringDeserializer.class)
                 .fromTopics(config.topic(), 30)
                 .awaitCompletion(Duration.ofSeconds(5));
 
@@ -84,7 +92,7 @@ public class KafkaSynthClientTest {
     @Test
     @DisplayName("Ack latency metrics are recorded")
     public void testAckLatencyRecorded() {
-        kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
+        kafkaCompanion.consumeWithDeserializers(StringDeserializer.class)
                 .fromTopics(config.topic(), 30)
                 .awaitCompletion(Duration.ofSeconds(5));
 
@@ -121,7 +129,7 @@ public class KafkaSynthClientTest {
     @Test
     @DisplayName("Records produced counter is recorded")
     public void testRecordsProducedCounterRecorded() {
-        kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
+        kafkaCompanion.consumeWithDeserializers(StringDeserializer.class)
                 .fromTopics(config.topic(), 30)
                 .awaitCompletion(Duration.ofSeconds(5));
 
@@ -141,5 +149,45 @@ public class KafkaSynthClientTest {
             var metrics = RestAssured.get("/q/metrics").asString();
             assertThat(metrics).contains("synth_client_producer_records_failed_total{rack=\"dc1\"}");
         });
+    }
+
+    @Test
+    @DisplayName("Payload size is configurable at runtime")
+    public void testPayloadSizeIsReconfigured() {
+        var res = kafkaCompanion.<Long, String>consumeWithDeserializers(LongDeserializer.class, StringDeserializer.class)
+                .fromTopics(config.topic(), 30)
+                .awaitCompletion(Duration.ofSeconds(5));
+        for (ConsumerRecord<Long, String> record : res.getRecords()) {
+            assertThat(record.value().length()).isEqualTo(8); // 8 is the default payload size
+        };
+        // now let's test that the payload size is reconfigured
+        kafkaSynthClient.setPayloadSize(10);
+        res = kafkaCompanion.<Long, String>consumeWithDeserializers(LongDeserializer.class, StringDeserializer.class)
+                .fromTopics(config.topic(), 50)
+                .awaitCompletion(Duration.ofSeconds(10));
+        // we expect the payload size to change to 10 at some point (perhaps not immediately)
+        var maxLength = res.getRecords().stream().mapToLong(r -> r.value().length()).max()
+                .orElseThrow();
+        assertThat(maxLength).isEqualTo(10);
+    }
+
+    @Test
+    @DisplayName("Command reconfigures payload size")
+    public void testCommandReconfiguresPayloadSize() {
+        var res = kafkaCompanion.<Long, String>consumeWithDeserializers(LongDeserializer.class, StringDeserializer.class)
+                .fromTopics(config.topic(), 30)
+                .awaitCompletion(Duration.ofSeconds(5));
+        for (ConsumerRecord<Long, String> record : res.getRecords()) {
+            assertThat(record.value().length()).isEqualTo(8); // 8 is the default payload size
+        };
+        // now let's issue a command to change the payload size and ensure that it propagates
+        commandService.issueCommand(new CommandService.Command(new CommandService.AdjustPayloadSizeCommand(10)));
+        res = kafkaCompanion.<Long, String>consumeWithDeserializers(LongDeserializer.class, StringDeserializer.class)
+                .fromTopics(config.topic(), 50)
+                .awaitCompletion(Duration.ofSeconds(10));
+        // we expect the payload size to change to 10 at some point (perhaps not immediately due to this being an asynchronous operation)
+        var maxLength = res.getRecords().stream().mapToLong(r -> r.value().length()).max()
+                .orElseThrow();
+        assertThat(maxLength).isEqualTo(10);
     }
 }

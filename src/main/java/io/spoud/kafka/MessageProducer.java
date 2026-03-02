@@ -36,7 +36,7 @@ public class MessageProducer implements HealthCheck {
     private final SynthClientConfig config;
     private final AtomicReference<Instant> lastMessage = new AtomicReference<>(Instant.now());
     private final String clientId;
-    private KafkaProducer<Long, byte[]> producer;
+    private KafkaProducer<Long, String> producer;
 
     public static final String HEADER_RACK = "rack";
     public static final String HEADER_ADVERTISED_LISTENER = "listener";
@@ -77,7 +77,7 @@ public class MessageProducer implements HealthCheck {
         oldProducer.close();
     }
 
-    public void send(Long key, byte[] value) {
+    public void send(Long key, String value) {
         Instant send = Instant.now();
         var record = new ProducerRecord<>(config.topic(), null, timeService.currentTimeMillis(), key, value);
         record.headers().add(HEADER_RACK, config.rack().getBytes());
