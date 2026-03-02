@@ -53,13 +53,14 @@ public class HistoryService {
                 var fromRack = summary.distributionSummary().getId().getTag(MetricService.TAG_FROM_RACK);
                 var toRack = summary.distributionSummary().getId().getTag(MetricService.TAG_TO_RACK);
                 var brokerRack = summary.distributionSummary().getId().getTag(MetricService.TAG_BROKER_RACK);
+                var brokerId = summary.distributionSummary().getId().getTag(MetricService.TAG_BROKER);
                 for (var v : snap.percentileValues()) {
                     Log.debugf("From `%s` via `%s` to `%s` %.2fth pct. = %.2fms", fromRack, brokerRack, toRack, 100. * v.percentile(), v.value());
                     appender.beginRow();
                     appender.append(timeService.now());
                     appender.append(fromRack);
                     appender.append(toRack);
-                    appender.append(brokerRack);
+                    appender.append(String.format("%s (ID %s)", brokerRack, brokerId));
                     appender.append((float)v.value());
                     appender.append((int) (100. * v.percentile()));
                     appender.endRow();
@@ -77,12 +78,13 @@ public class HistoryService {
                 var snap = summary.distributionSummary().takeSnapshot();
                 var rack = summary.distributionSummary().getId().getTag(MetricService.TAG_RACK);
                 var brokerRack = summary.distributionSummary().getId().getTag(MetricService.TAG_BROKER_RACK);
+                var brokerId = summary.distributionSummary().getId().getTag(MetricService.TAG_BROKER);
                 for (var v : snap.percentileValues()) {
                     Log.debugf("Ack latency for rack `%s` via `%s` %.2fth pct. = %.2fms", rack, brokerRack, 100. * v.percentile(), v.value());
                     appender.beginRow();
                     appender.append(timeService.now());
                     appender.append(rack);
-                    appender.append(brokerRack);
+                    appender.append(String.format("%s (ID %s)", brokerRack, brokerId));
                     appender.append((float) v.value());
                     appender.append((int) (100. * v.percentile()));
                     appender.endRow();
