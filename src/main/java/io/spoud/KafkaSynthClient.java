@@ -25,7 +25,7 @@ import java.util.random.RandomGenerator;
 @ApplicationScoped
 public class KafkaSynthClient {
     private final RandomGenerator randomGenerator = RandomGenerator.getDefault();
-    private final byte[] message;
+    private String message;
     private final MessageProducer producer;
     private final int messagesPerSecond;
     private final AdminClient adminClient;
@@ -39,10 +39,24 @@ public class KafkaSynthClient {
             MessageProducer producer,
             AdminClient adminClient) {
         this.config = config;
-        this.message = new byte[config.messages().messageSizeBytes()];
+        setPayloadSize(config.messages().messageSizeBytes());
         this.producer = producer;
         this.messagesPerSecond = Math.max(config.messages().messagesPerSecond(), 1);
         this.adminClient = adminClient;
+    }
+
+    public void setPayloadSize(long length) {
+        length = Math.max(1, length);
+        Log.infof("Setting message size to %s bytes", length);
+        this.message = randomString(length);
+    }
+
+    private static String randomString(long length) {
+        var strb = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            strb.append((char) ('a' + (int)(Math.random() * 26)));
+        }
+        return strb.toString();
     }
 
     public void start(@Observes  @Priority(Interceptor.Priority.APPLICATION - 1)  StartupEvent event) {
@@ -117,14 +131,17 @@ public class KafkaSynthClient {
         }
     }
 
-    // TODO this sounds sketchy, we have no guarantee that the scheduler will run every seconds
     @Scheduled(every = "1s")
     void produceMessage() {
         if (waitForTopicCreated.get()) {
             return;
         }
         for (int i = 0; i < messagesPerSecond; i++) {
-            producer.send(randomGenerator.nextLong(), message);
+            produceSingleMessage(message);
         }
+    }
+
+    void produceSingleMessage(String payload) {
+        producer.send(randomGenerator.nextLong(), payload);
     }
 }

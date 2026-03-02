@@ -11,10 +11,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.apache.kafka.common.serialization.ByteArraySerializer;
-import org.apache.kafka.common.serialization.LongDeserializer;
-import org.apache.kafka.common.serialization.LongSerializer;
+import org.apache.kafka.common.serialization.*;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.HashMap;
@@ -33,17 +30,17 @@ public class KafkaFactory {
         return KafkaAdminClient.create(getKafkaConfig(AdminClientConfig.configNames()));
     }
 
-    public KafkaConsumer<Long, byte[]> createConsumer() {
+    public KafkaConsumer<Long, String> createConsumer() {
         Map<String, Object> config = getKafkaConfig(ConsumerConfig.configNames());
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class);
-        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         return new KafkaConsumer<>(config);
     }
 
-    public KafkaProducer<Long, byte[]> createProducer() {
+    public KafkaProducer<Long, String> createProducer() {
         Map<String, Object> config = getKafkaConfig(ProducerConfig.configNames());
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         return new KafkaProducer<>(config);
     }
 
