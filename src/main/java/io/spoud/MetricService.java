@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.*;
 import io.quarkus.logging.Log;
 import io.spoud.config.SynthClientConfig;
 import io.spoud.kafka.PartitionRebalancer;
+import io.vertx.core.impl.ConcurrentHashSet;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -89,7 +90,12 @@ public class MetricService {
         recordsFailedCounter.increment();
     }
 
-    synchronized public void recordLatency(String topic, int partition, long latencyMs, String fromRack) {
+    synchronized public void recordLatency(String topic, int partition, long latencyMs, String fromRack, long offset) {
+        if (fromRack.equals(config.rack()) && !ackedOffsets.contains(new AckedMessage(offset, partition))) {
+            Log.warnf("Consumed message %d:%d before receiving an ACK! This means that Ack latency could be higher than E2E latency!", partition, offset);
+        } else {
+            ackedOffsets.remove(new AckedMessage(offset, partition));
+        }
         Log.debugv("Latency for partition {0}: {1}ms", partition, latencyMs);
         if (partitionRebalancer.isInitialRefreshPending()) {
             Log.info("Ignoring latencies as the initial partition assignment is not done yet");
@@ -132,7 +138,12 @@ public class MetricService {
         return e2eLatencies.values();
     }
 
-    public void recordAckLatency(String topic, int partition, Duration between) {
+    public record AckedMessage(long offset, int partition) {
+    }
+    private final Set<AckedMessage> ackedOffsets = new ConcurrentHashSet<>();
+
+    public void recordAckLatency(String topic, int partition, Duration between, long offset) {
+        ackedOffsets.add(new AckedMessage(offset, partition));
         Log.debugv("Ack latency for partition {0}: {1}ms", partition, between.toMillis());
         if (partitionRebalancer.isInitialRefreshPending()) {
             Log.info("Ignoring ack latency as the initial partition assignment is not done yet");
@@ -192,8 +203,8 @@ public class MetricService {
                 .tag(TAG_FROM_RACK, fromRack)
                 .tag(TAG_BROKER_RACK, brokerRack)
                 .description("End-to-end latency of the synthetic client")
-                .minimumExpectedValue(1.0)
-                .maximumExpectedValue(10_000.0)
+                .minimumExpectedValue(config.expectedMinLatency())
+                .maximumExpectedValue(config.expectedMaxLatency())
                 .publishPercentiles(0.5, 0.8, 0.9, 0.95, 0.99)
                 .publishPercentileHistogram(config.publishHistogramBuckets())
                 .distributionStatisticExpiry(config.samplingTimeWindow())
