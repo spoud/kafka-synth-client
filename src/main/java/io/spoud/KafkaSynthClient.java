@@ -144,15 +144,12 @@ public class KafkaSynthClient {
         return adminClient
                 .describeConfigs(List.of(new ConfigResource(ConfigResource.Type.TOPIC, config.topic())))
                 .all()
-                .thenApply((configs) -> {
-                    var badTimestampType = configs.values()
-                            .stream()
-                            .findFirst()
-                            .stream()
-                            .map(c -> c.get(TopicConfig.MESSAGE_TIMESTAMP_TYPE_CONFIG))
-                            .anyMatch(c -> "LogAppendTime".equals(c.value()));
-                    return !badTimestampType;
-                })
+                .thenApply((configs) -> configs.values()
+                        .stream()
+                        .findFirst()
+                        .stream()
+                        .map(c -> c.get(TopicConfig.MESSAGE_TIMESTAMP_TYPE_CONFIG))
+                        .noneMatch(c -> "LogAppendTime".equals(c.value())))
                 .toCompletionStage()
                 .handle((isCreateTime, error) -> {
                     if (error != null) {
