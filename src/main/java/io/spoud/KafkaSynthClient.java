@@ -19,6 +19,7 @@ import org.apache.kafka.common.errors.TopicExistsException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.random.RandomGenerator;
 
@@ -54,12 +55,12 @@ public class KafkaSynthClient {
     private static String randomString(long length) {
         var strb = new StringBuilder();
         for (int i = 0; i < length; i++) {
-            strb.append((char) ('a' + (int)(Math.random() * 26)));
+            strb.append((char) ('a' + (int) (Math.random() * 26)));
         }
         return strb.toString();
     }
 
-    public void start(@Observes  @Priority(Interceptor.Priority.APPLICATION - 1)  StartupEvent event) {
+    public void start(@Observes @Priority(Interceptor.Priority.APPLICATION - 1) StartupEvent event) {
         if (config.autoCreateTopic()) {
             Log.infof("Creating topic %s", config.topic());
             adminClient.describeCluster().nodes().whenComplete((nodes, t) -> {
@@ -69,36 +70,39 @@ public class KafkaSynthClient {
                 }
                 short replicationFactor = (short) Math.max(Math.min(config.topicReplicationFactor(), nodes.size()), 1);
                 Log.debugf("ReplicationFactor calculated %s", replicationFactor);
-                if(config.topicReplicationFactor() <= 0) {
+                if (config.topicReplicationFactor() <= 0) {
                     Log.infof("Replication factor set to %s assuming number of nodes %s", config.topicReplicationFactor(), nodes.size());
                     replicationFactor = (short) nodes.size();
                 }
                 short finalReplicationFactor = replicationFactor;
-                int minInSyncReplicas = Math.max(finalReplicationFactor -1, 1);
+                int minInSyncReplicas = Math.max(finalReplicationFactor - 1, 1);
                 this.adminClient.listTopics().names().whenComplete((topics, throwable) -> {
                     if (throwable != null) {
                         throw new RuntimeException("Failed to list topics", throwable);
                     }
                     if (!topics.contains(config.topic())) {
 
-                            this.adminClient.createTopics(List.of(new NewTopic(config.topic(), nodes.size(), finalReplicationFactor).configs(
-                                    Map.of(TopicConfig.RETENTION_MS_CONFIG, "3600000", TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG, String.valueOf(minInSyncReplicas))
-                            ))).all().whenComplete((v, t1) -> {
-                                if (t1 != null) {
-                                    // if there is auto.create concurrently happening, we might get a TopicExistsException
-                                    if(t1 instanceof TopicExistsException) {
-                                        waitForTopicCreated.set(false);
-                                        Log.infof("Topic already exists %s", config.topic());
-                                    } else {
-                                        throw new RuntimeException("Failed to create topic", t1);
-                                    }
+                        this.adminClient.createTopics(List.of(new NewTopic(config.topic(), nodes.size(), finalReplicationFactor).configs(
+                                Map.of(TopicConfig.RETENTION_MS_CONFIG, "3600000",
+                                        TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG, String.valueOf(minInSyncReplicas),
+                                        TopicConfig.MESSAGE_TIMESTAMP_TYPE_CONFIG, "CreateTime"
+                                )
+                        ))).all().whenComplete((v, t1) -> {
+                            if (t1 != null) {
+                                // if there is auto.create concurrently happening, we might get a TopicExistsException
+                                if (t1 instanceof TopicExistsException) {
+                                    Log.infof("Topic already exists %s", config.topic());
+                                    validateTopic();
                                 } else {
-                                    Log.infof("Topic created %s", config.topic());
-                                    waitForTopicCreated.set(false);
+                                    throw new RuntimeException("Failed to create topic", t1);
                                 }
-                            });
+                            } else {
+                                Log.infof("Topic created %s", config.topic());
+                                validateTopic();
+                            }
+                        });
                     } else {
-                        waitForTopicCreated.set(false);
+                        validateTopic();
                         Log.infof("Topic already exists %s", config.topic());
                         // check replication factor and min in sync replicas config for topic
                         adminClient.describeTopics(List.of(config.topic())).allTopicNames().whenComplete((v, t1) -> {
@@ -106,7 +110,7 @@ public class KafkaSynthClient {
                                 throw new RuntimeException("Failed to describe topic", t1);
                             }
                             var replicationFactorConfig = v.get(config.topic()).partitions().getFirst().replicas().size();
-                            if( replicationFactorConfig != finalReplicationFactor) {
+                            if (replicationFactorConfig != finalReplicationFactor) {
                                 Log.errorf("Replication factor for topic %s is %s, expected %s", config.topic(), replicationFactorConfig, finalReplicationFactor);
                             }
 
@@ -118,7 +122,7 @@ public class KafkaSynthClient {
                                 throw new RuntimeException("Failed to get topic config", t1);
                             }
                             var minInSyncReplicasConfig = configEntries.get(cr).get(TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG);
-                            if(minInSyncReplicasConfig == null || Integer.parseInt(minInSyncReplicasConfig.value()) != minInSyncReplicas) {
+                            if (minInSyncReplicasConfig == null || Integer.parseInt(minInSyncReplicasConfig.value()) != minInSyncReplicas) {
                                 Log.errorf("Min in sync replicas for topic %s is %s, expected %s", config.topic(), minInSyncReplicasConfig, minInSyncReplicas);
                             }
                         });
@@ -127,8 +131,36 @@ public class KafkaSynthClient {
                 });
             });
         } else {
-            waitForTopicCreated.set(false);
+            validateTopic();
         }
+    }
+
+    private void validateTopic() {
+        isCreateTimeConfiguredForTopic()
+                .thenRun(() -> waitForTopicCreated.set(false));
+    }
+
+    private CompletionStage<Boolean> isCreateTimeConfiguredForTopic() {
+        return adminClient
+                .describeConfigs(List.of(new ConfigResource(ConfigResource.Type.TOPIC, config.topic())))
+                .all()
+                .thenApply((configs) -> configs.values()
+                        .stream()
+                        .findFirst()
+                        .stream()
+                        .map(c -> c.get(TopicConfig.MESSAGE_TIMESTAMP_TYPE_CONFIG))
+                        .noneMatch(c -> "LogAppendTime".equals(c.value())))
+                .toCompletionStage()
+                .handle((isCreateTime, error) -> {
+                    if (error != null) {
+                        Log.warn("Failed to check topic timestamp type config for topic. Do you have permissions to describe topic configs? Will continue with the assumption that topic has CreateTime timestamp type configured.", error);
+                        return true;
+                    } else if (!isCreateTime) {
+                        Log.error("Topic does not have CreateTime timestamp type configured. Please change the topic configuration `message.timestamp.type` to `CreateTime`.");
+                        throw new RuntimeException("Failed to ensure that topic has CreateTime timestamp type configured.");
+                    }
+                    return true;
+                });
     }
 
     @Scheduled(every = "1s")
