@@ -34,7 +34,7 @@ public interface SynthClientConfig {
 
     Double expectedMaxLatency();
 
-    String historyDatabasePath();
+    Optional<String> historyDatabasePath();
 
     Duration historyRetentionPeriod();
 
