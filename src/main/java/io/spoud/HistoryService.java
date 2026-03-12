@@ -32,20 +32,28 @@ public class HistoryService {
         this.metricService = metricService;
         this.timeService = timeService;
         this.retentionTime = config.historyRetentionPeriod();
+        this.advertisedListenerRepository = advertisedListenerRepository;
+        this.synthClientConfig = synthClientConfig;
+        if (config.historyDatabasePath().isEmpty() || config.historyDatabasePath().get().isBlank()) {
+            Log.info("History database path is not configured, history service is disabled");
+            conn = null;
+            return;
+        }
         Class.forName("org.duckdb.DuckDBDriver"); // make sure that the driver is registered
-        conn = (DuckDBConnection) DriverManager.getConnection(config.historyDatabasePath());
+        conn = (DuckDBConnection) DriverManager.getConnection(config.historyDatabasePath().get());
         conn.createStatement().execute("""
                 CREATE TABLE IF NOT EXISTS e2e_latencies (timestamp TIMESTAMPTZ, from_rack VARCHAR, to_rack VARCHAR, broker_rack VARCHAR, latency_ms REAL, percentile INT);
                 """);
         conn.createStatement().execute("""
                 CREATE TABLE IF NOT EXISTS ack_latencies (timestamp TIMESTAMPTZ, rack VARCHAR, broker_rack VARCHAR, latency_ms REAL, percentile INT);
                 """);
-        this.advertisedListenerRepository = advertisedListenerRepository;
-        this.synthClientConfig = synthClientConfig;
     }
 
     @Scheduled(every = "15s", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
     void recordSnapshot() {
+        if (conn == null) {
+            return;
+        }
         int rowCount = 0;
         try (var appender = conn.createAppender(DuckDBConnection.DEFAULT_SCHEMA, "e2e_latencies")) {
             for (var summary : metricService.getE2ELatencies()) {
@@ -100,6 +108,9 @@ public class HistoryService {
 
     @Scheduled(every = "1h", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
     void cleanUpHistory() {
+        if (conn == null) {
+            return;
+        }
         cleanUpTable("e2e_latencies");
         cleanUpTable("ack_latencies");
     }
@@ -122,6 +133,9 @@ public class HistoryService {
     @GET
     @Path("/message-paths")
     public List<MessagePath> getMessagePaths() throws SQLException {
+        if (conn == null) {
+            return Collections.emptyList();
+        }
         var paths = conn.createStatement().executeQuery("""
                 SELECT e2e.from_rack, e2e.to_rack, e2e.broker_rack, last(e2e.latency_ms ORDER BY e2e.timestamp ASC) AS latest_p99_latency, last(ack.latency_ms ORDER BY ack.timestamp ASC) AS latest_p99_ack_latency
                 FROM e2e_latencies e2e
@@ -146,6 +160,9 @@ public class HistoryService {
                                           @PathParam("to") String to,
                                           @QueryParam("interval_start") Instant start,
                                           @QueryParam("interval_end") Instant end) throws SQLException {
+        if (conn == null) {
+            return new LatencySummary(new long[0], new HashMap<>());
+        }
         var startTime = (start != null ? start : timeService.now().minusHours(1).toInstant()).atOffset(ZoneOffset.UTC);
         var endTime = (end != null ? end : timeService.now().toInstant()).atOffset(ZoneOffset.UTC);
         var timeBucketWidthSeconds = 15 * (Math.ceil(Duration.between(startTime, endTime).toMinutes() / 60.));
@@ -181,6 +198,9 @@ public class HistoryService {
     @GET
     @Path("/other-racks")
     public Map<String, String> getOtherRackUrls() {
+        if (conn == null) {
+            return Collections.emptyMap();
+        }
         return advertisedListenerRepository.getListeners()
                 .entrySet()
                 .stream()
@@ -194,6 +214,9 @@ public class HistoryService {
                                                 @PathParam("via") String via,
                                                 @QueryParam("interval_start") Instant start,
                                                 @QueryParam("interval_end") Instant end) throws SQLException {
+        if (conn == null) {
+            return new LatencySummary(new long[0], new HashMap<>());
+        }
         var endTime = (end != null ? end : timeService.now().toInstant()).atOffset(ZoneOffset.UTC);
         var startTime = (start != null ? start : endTime.minusHours(1).toInstant()).atOffset(ZoneOffset.UTC);
         var timeBucketWidthSeconds = 15 * (Math.ceil(Duration.between(startTime, endTime).toMinutes() / 60.));
