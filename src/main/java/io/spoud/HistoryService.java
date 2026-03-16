@@ -47,6 +47,7 @@ public class HistoryService {
     @Scheduled(every = "15s", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
     void recordSnapshot() {
         int rowCount = 0;
+        var now = timeService.now();
         try (var appender = conn.createAppender(DuckDBConnection.DEFAULT_SCHEMA, "e2e_latencies")) {
             for (var summary : metricService.getE2ELatencies()) {
                 var snap = summary.distributionSummary().takeSnapshot();
@@ -57,7 +58,7 @@ public class HistoryService {
                 for (var v : snap.percentileValues()) {
                     Log.debugf("From `%s` via `%s` to `%s` %.2fth pct. = %.2fms", fromRack, brokerRack, toRack, 100. * v.percentile(), v.value());
                     appender.beginRow();
-                    appender.append(timeService.now());
+                    appender.append(now);
                     appender.append(fromRack);
                     appender.append(toRack);
                     appender.append(String.format("%s (ID %s)", brokerRack, brokerId));
@@ -82,7 +83,7 @@ public class HistoryService {
                 for (var v : snap.percentileValues()) {
                     Log.debugf("Ack latency for rack `%s` via `%s` %.2fth pct. = %.2fms", rack, brokerRack, 100. * v.percentile(), v.value());
                     appender.beginRow();
-                    appender.append(timeService.now());
+                    appender.append(now);
                     appender.append(rack);
                     appender.append(String.format("%s (ID %s)", brokerRack, brokerId));
                     appender.append((float) v.value());
@@ -125,8 +126,8 @@ public class HistoryService {
         var paths = conn.createStatement().executeQuery("""
                 SELECT e2e.from_rack, e2e.to_rack, e2e.broker_rack, last(e2e.latency_ms ORDER BY e2e.timestamp ASC) AS latest_p99_latency, last(ack.latency_ms ORDER BY ack.timestamp ASC) AS latest_p99_ack_latency
                 FROM e2e_latencies e2e
-                LEFT JOIN ack_latencies ack ON e2e.broker_rack = ack.broker_rack AND e2e.from_rack = ack.rack AND ack.percentile = e2e.percentile
-                WHERE e2e.percentile = 99
+                LEFT JOIN ack_latencies ack ON e2e.broker_rack = ack.broker_rack AND e2e.from_rack = ack.rack AND ack.percentile = e2e.percentile AND e2e.timestamp = ack.timestamp
+                WHERE e2e.percentile = 99 AND e2e.timestamp >= now() - interval '1 hour' AND ack.timestamp >= now() - interval '1 hour'
                 GROUP BY e2e.from_rack, e2e.to_rack, e2e.broker_rack
                 """);
         var result = new ArrayList<MessagePath>();
