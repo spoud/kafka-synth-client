@@ -96,8 +96,8 @@ class TimeServiceTest {
             }
 
             @Override
-            public String historyDatabasePath() {
-                return "jdbc:duckdb:";
+            public Optional<String> historyDatabasePath() {
+                return Optional.of("jdbc:duckdb:");
             }
 
             @Override
