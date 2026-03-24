@@ -46,6 +46,26 @@ npm run build
 
 > **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
 
+### Running UI smoke tests
+
+The React UI includes a small Playwright smoke suite that exercises the main dashboard and latency detail pages with mocked API responses.
+
+```shell script
+# from the src/main/webui directory
+npm ci
+npx playwright install --with-deps chromium
+npm test
+```
+
+### Auto-merge for pull requests
+
+Dependabot PRs that are dependency version updates are now auto-approved and set to auto-merge after the required checks pass. Other PRs can still opt in by adding the `automerge` label.
+
+For that to work end-to-end, the repository needs:
+
+- repository setting `Allow auto-merge` enabled
+- branch protection rules that require the current PR validation check on `main` (currently `build`)
+
 ### Packaging and running the application
 
 The application can be packaged using:
