@@ -46,18 +46,20 @@ function Explanation({ content }: { content: string }) {
 function MessagePathCard({
   path,
   to,
+  linkLabel,
   latencyMs = 0,
   latencyColor = "var(--mantine-color-green-6)",
   showToRack = true,
 }: {
   path: MessagePath;
   to: string;
+  linkLabel: string;
   latencyMs?: number | null;
   showToRack?: boolean;
   latencyColor?: string;
 }) {
   return (
-    <Link to={to} style={{ textDecoration: "none" }}>
+    <Link to={to} aria-label={linkLabel} style={{ textDecoration: "none" }}>
       <Card
         withBorder
         p={"md"}
@@ -188,6 +190,7 @@ export function MessagePathsDashboard() {
                 to={withBaseURI(
                   `/e2e-latencies/${path.fromRack}/${path.viaBrokerRack}/${path.toRack}`,
                 )}
+                linkLabel={`Open end-to-end latency for client rack ${path.fromRack} via broker rack ${path.viaBrokerRack} to client rack ${path.toRack}`}
                 showToRack={true}
                 latencyMs={path.latestP99latency}
                 latencyColor={latencyColor}
@@ -220,6 +223,7 @@ export function MessagePathsDashboard() {
                 to={withBaseURI(
                   `/ack-latencies/${path.fromRack}/${path.viaBrokerRack}`,
                 )}
+                linkLabel={`Open ack latency for client rack ${path.fromRack} via broker rack ${path.viaBrokerRack}`}
                 showToRack={false}
                 latencyColor={latencyColor}
                 latencyMs={path.latestP99AckLatency}

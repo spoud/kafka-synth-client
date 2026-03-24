@@ -1,0 +1,55 @@
+name: Manage PR Auto-merge
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+      - ready_for_review
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable-dependabot-automerge:
+    if: ${{ github.actor == 'dependabot[bot]' && !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          skip-commit-verification: true
+
+      - name: Approve Dependabot version update PR
+        if: ${{ startsWith(steps.metadata.outputs.update-type, 'version-update:') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          review_decision="$(gh pr view "$PR_NUMBER" --repo "$REPO" --json reviewDecision -q .reviewDecision)"
+          if [ "$review_decision" != "APPROVED" ]; then
+            gh pr review "$PR_NUMBER" --repo "$REPO" --approve --body "Auto-approving Dependabot version update."
+          else
+            echo "PR is already approved."
+          fi
+
+      - name: Enable auto-merge for Dependabot version update PR
+        if: ${{ startsWith(steps.metadata.outputs.update-type, 'version-update:') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}"
+
+  enable-labeled-automerge:
+    if: ${{ github.actor != 'dependabot[bot]' && !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'automerge') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable GitHub auto-merge for labeled PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --merge "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}"
