@@ -15,13 +15,13 @@
     "@mantine/core": "^8.3.18",
     "@mantine/dates": "^8.3.18",
     "@mantine/hooks": "^8.3.14",
-    "@tabler/icons": "^3.40.0",
-    "@tabler/icons-react": "^3.40.0",
+    "@tabler/icons": "^3.41.0",
+    "@tabler/icons-react": "^3.41.0",
     "dayjs": "^1.11.20",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router": "^7.13.2",
-    "recharts": "^3.8.0"
+    "recharts": "^3.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
