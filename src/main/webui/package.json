@@ -20,7 +20,7 @@
     "dayjs": "^1.11.20",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-router": "^7.14.0",
+    "react-router": "^7.14.1",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
@@ -31,14 +31,14 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
     "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-hooks": "^7.1.0",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
-    "postcss": "^8.5.9",
+    "globals": "^17.5.0",
+    "postcss": "^8.5.10",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
-    "typescript": "~6.0.2",
-    "typescript-eslint": "^8.58.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.58.2",
     "vite": "^7.3.2"
   }
 }
