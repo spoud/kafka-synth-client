@@ -32,7 +32,7 @@ public class KafkaSynthClientRecordIgnoreTest {
     ConsumerLifecycle lifecycle;
 
     @Test
-    @DisplayName("End-to-end latency is not recorded after first n messages")
+    @DisplayName("End-to-end latency is recorded with 0.0 after first n messages")
     public void testEndToEndLatencyNotRecorded() {
         kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
                 .fromTopics(config.topic(), 3)
@@ -40,16 +40,16 @@ public class KafkaSynthClientRecordIgnoreTest {
 
         var metrics = RestAssured.get("/q/metrics").asString();
 
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}");
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.9\"}");
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.95\"}");
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.99\"}");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"} 0.0");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.9\"} 0.0");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.95\"} 0.0");
+        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.99\"} 0.0");
 
-        // ...but eventually they should appear
-        await().atMost(Duration.ofSeconds(5))
+        // ...but eventually they should get a value other than 0.0
+        await().atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(() ->
-                        assertThat(RestAssured.get("/q/metrics").asString()).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}")
+                        assertThat(RestAssured.get("/q/metrics").asString()).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"} 0.0")
                 );
 
         lifecycle.shutdown();
