@@ -12,9 +12,9 @@
   },
   "dependencies": {
     "@mantine/charts": "^9.2.1",
-    "@mantine/core": "^8.3.18",
-    "@mantine/dates": "^8.3.18",
-    "@mantine/hooks": "^8.3.14",
+    "@mantine/core": "^9.2.1",
+    "@mantine/dates": "^9.2.1",
+    "@mantine/hooks": "^9.2.1",
     "@tabler/icons": "^3.44.0",
     "@tabler/icons-react": "^3.44.0",
     "dayjs": "^1.11.20",
@@ -39,6 +39,6 @@
     "postcss-simple-vars": "^7.0.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.59.3",
-    "vite": "^7.3.2"
+    "vite": "^8.0.13"
   }
 }
