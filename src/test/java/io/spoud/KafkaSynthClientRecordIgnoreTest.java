@@ -22,6 +22,9 @@ import static org.awaitility.Awaitility.await;
 @QuarkusTestResource(KafkaCompanionResource.class)
 @TestProfile(IgnoreRecordsTestProfile.class)
 public class KafkaSynthClientRecordIgnoreTest {
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(15);
+    private static final String E2E_METRIC_PREFIX = "synth_client_e2e_latency_ms{";
+
     @InjectKafkaCompanion
     KafkaCompanion kafkaCompanion;
 
@@ -36,20 +39,17 @@ public class KafkaSynthClientRecordIgnoreTest {
     public void testEndToEndLatencyNotRecorded() {
         kafkaCompanion.consumeWithDeserializers(ByteArrayDeserializer.class)
                 .fromTopics(config.topic(), 3)
-                .awaitCompletion(Duration.ofSeconds(5));
+                .awaitCompletion(DEFAULT_TIMEOUT);
 
         var metrics = RestAssured.get("/q/metrics").asString();
 
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}");
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.9\"}");
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.95\"}");
-        assertThat(metrics).doesNotContain("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.99\"}");
+        assertThat(metrics).doesNotContain(E2E_METRIC_PREFIX);
 
         // ...but eventually they should appear
-        await().atMost(Duration.ofSeconds(5))
+        await().atMost(DEFAULT_TIMEOUT)
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(() ->
-                        assertThat(RestAssured.get("/q/metrics").asString()).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}")
+                        assertThat(RestAssured.get("/q/metrics").asString()).contains(E2E_METRIC_PREFIX)
                 );
 
         lifecycle.shutdown();

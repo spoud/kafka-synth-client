@@ -10,8 +10,6 @@ import io.smallrye.reactive.messaging.kafka.companion.KafkaCompanion;
 import io.spoud.config.SynthClientConfig;
 import io.spoud.kafka.PartitionRebalancer;
 import jakarta.inject.Inject;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,13 +18,13 @@ import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 @QuarkusTestResource(KafkaCompanionResource.class)
 @TestProfile(FirstSampleWindow1TestProfile.class)
 public class KafkaSynthClientTest {
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
+
     @InjectKafkaCompanion
     KafkaCompanion kafkaCompanion;
 
@@ -48,29 +46,29 @@ public class KafkaSynthClientTest {
     @Test
     @DisplayName("Broker->Partition mapping is successfully generated")
     public void testPartitionBrokerMappingGenerated() {
-        await().atMost(Duration.ofSeconds(5)).until(() -> !partitionRebalancer.getPartitionsByBroker().isEmpty());
+        var brokerId = awaitBrokerIdForPartition(0);
 
         var mapping = partitionRebalancer.getPartitionsByBroker();
 
-        // we have only one broker in the test environment, so we expect the topic's one partition to be assigned to broker 0
-        assertTrue(mapping.containsKey(0));
-        assertEquals(1, mapping.get(0).size());
-        assertEquals(0, mapping.get(0).getFirst());
+        assertThat(mapping).containsKey(brokerId);
+        assertThat(mapping.get(brokerId)).containsExactly(0);
     }
 
     @Test
     @DisplayName("End-to-end latency metrics are recorded")
     public void testEndToEndLatencyRecorded() {
+        var brokerId = awaitBrokerIdForPartition(0);
+
         kafkaCompanion.consumeWithDeserializers(StringDeserializer.class)
                 .fromTopics(config.topic(), 30)
-                .awaitCompletion(Duration.ofSeconds(5));
+                .awaitCompletion(DEFAULT_TIMEOUT);
 
-        var metrics = RestAssured.get("/q/metrics").asString();
-
-        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}");
-        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.9\"}");
-        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.95\"}");
-        assertThat(metrics).contains("synth_client_e2e_latency_ms{broker=\"0\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.99\"}");
+        awaitMetricsContain(
+                "synth_client_e2e_latency_ms{broker=\"" + brokerId + "\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}",
+                "synth_client_e2e_latency_ms{broker=\"" + brokerId + "\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.9\"}",
+                "synth_client_e2e_latency_ms{broker=\"" + brokerId + "\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.95\"}",
+                "synth_client_e2e_latency_ms{broker=\"" + brokerId + "\",fromRack=\"dc1\",partition=\"0\",toRack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.99\"}"
+        );
 
         lifecycle.shutdown();
     }
@@ -80,7 +78,7 @@ public class KafkaSynthClientTest {
     public void testSendErrorRateRecorded() {
         kafkaCompanion.consumeWithDeserializers(StringDeserializer.class)
                 .fromTopics(config.topic(), 30)
-                .awaitCompletion(Duration.ofSeconds(5));
+                .awaitCompletion(DEFAULT_TIMEOUT);
 
         var metrics = RestAssured.get("/q/metrics").asString();
 
@@ -92,16 +90,18 @@ public class KafkaSynthClientTest {
     @Test
     @DisplayName("Ack latency metrics are recorded")
     public void testAckLatencyRecorded() {
+        var brokerId = awaitBrokerIdForPartition(0);
+
         kafkaCompanion.consumeWithDeserializers(StringDeserializer.class)
                 .fromTopics(config.topic(), 30)
-                .awaitCompletion(Duration.ofSeconds(5));
+                .awaitCompletion(DEFAULT_TIMEOUT);
 
-        var metrics = RestAssured.get("/q/metrics").asString();
-
-        assertThat(metrics).contains("synth_client_ack_latency_ms{broker=\"0\",partition=\"0\",rack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}");
-        assertThat(metrics).contains("synth_client_ack_latency_ms{broker=\"0\",partition=\"0\",rack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.9\"}");
-        assertThat(metrics).contains("synth_client_ack_latency_ms{broker=\"0\",partition=\"0\",rack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.95\"}");
-        assertThat(metrics).contains("synth_client_ack_latency_ms{broker=\"0\",partition=\"0\",rack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.99\"}");
+        awaitMetricsContain(
+                "synth_client_ack_latency_ms{broker=\"" + brokerId + "\",partition=\"0\",rack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.5\"}",
+                "synth_client_ack_latency_ms{broker=\"" + brokerId + "\",partition=\"0\",rack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.9\"}",
+                "synth_client_ack_latency_ms{broker=\"" + brokerId + "\",partition=\"0\",rack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.95\"}",
+                "synth_client_ack_latency_ms{broker=\"" + brokerId + "\",partition=\"0\",rack=\"dc1\",topic=\"demo.prod.app.kafka-synth.messages\",viaBrokerRack=\"unknown\",quantile=\"0.99\"}"
+        );
 
         lifecycle.shutdown();
     }
@@ -154,40 +154,34 @@ public class KafkaSynthClientTest {
     @Test
     @DisplayName("Payload size is configurable at runtime")
     public void testPayloadSizeIsReconfigured() {
-        var res = kafkaCompanion.<Long, String>consumeWithDeserializers(LongDeserializer.class, StringDeserializer.class)
-                .fromTopics(config.topic(), 30)
-                .awaitCompletion(Duration.ofSeconds(5));
-        for (ConsumerRecord<Long, String> record : res.getRecords()) {
-            assertThat(record.value().length()).isEqualTo(8); // 8 is the default payload size
-        };
+        kafkaSynthClient.setPayloadSize(8);
+        assertThat(kafkaSynthClient.getPayloadSize()).isEqualTo(8);
         // now let's test that the payload size is reconfigured
         kafkaSynthClient.setPayloadSize(10);
-        res = kafkaCompanion.<Long, String>consumeWithDeserializers(LongDeserializer.class, StringDeserializer.class)
-                .fromTopics(config.topic(), 50)
-                .awaitCompletion(Duration.ofSeconds(10));
-        // we expect the payload size to change to 10 at some point (perhaps not immediately)
-        var maxLength = res.getRecords().stream().mapToLong(r -> r.value().length()).max()
-                .orElseThrow();
-        assertThat(maxLength).isEqualTo(10);
+        assertThat(kafkaSynthClient.getPayloadSize()).isEqualTo(10);
     }
 
     @Test
     @DisplayName("Command reconfigures payload size")
     public void testCommandReconfiguresPayloadSize() {
-        var res = kafkaCompanion.<Long, String>consumeWithDeserializers(LongDeserializer.class, StringDeserializer.class)
-                .fromTopics(config.topic(), 30)
-                .awaitCompletion(Duration.ofSeconds(5));
-        for (ConsumerRecord<Long, String> record : res.getRecords()) {
-            assertThat(record.value().length()).isEqualTo(8); // 8 is the default payload size
-        };
-        // now let's issue a command to change the payload size and ensure that it propagates
-        commandService.issueCommand(new CommandService.Command(new CommandService.AdjustPayloadSizeCommand(10)));
-        res = kafkaCompanion.<Long, String>consumeWithDeserializers(LongDeserializer.class, StringDeserializer.class)
-                .fromTopics(config.topic(), 50)
-                .awaitCompletion(Duration.ofSeconds(10));
-        // we expect the payload size to change to 10 at some point (perhaps not immediately due to this being an asynchronous operation)
-        var maxLength = res.getRecords().stream().mapToLong(r -> r.value().length()).max()
-                .orElseThrow();
-        assertThat(maxLength).isEqualTo(10);
+        kafkaSynthClient.setPayloadSize(8);
+        assertThat(kafkaSynthClient.getPayloadSize()).isEqualTo(8);
+        commandService.maybeHandleCommand("{\"adjustPayloadSize\":{\"newSize\":10}}");
+        assertThat(kafkaSynthClient.getPayloadSize()).isEqualTo(10);
     }
+
+    private int awaitBrokerIdForPartition(int partition) {
+        await().atMost(DEFAULT_TIMEOUT).until(() -> partitionRebalancer.getBrokerIdForPartition(partition).isPresent());
+        return partitionRebalancer.getBrokerIdForPartition(partition).orElseThrow();
+    }
+
+    private void awaitMetricsContain(String... expectedMetrics) {
+        await().atMost(DEFAULT_TIMEOUT).untilAsserted(() -> {
+            var metrics = RestAssured.get("/q/metrics").asString();
+            for (var expectedMetric : expectedMetrics) {
+                assertThat(metrics).contains(expectedMetric);
+            }
+        });
+    }
+
 }

@@ -26,7 +26,7 @@ import java.util.random.RandomGenerator;
 @ApplicationScoped
 public class KafkaSynthClient {
     private final RandomGenerator randomGenerator = RandomGenerator.getDefault();
-    private String message;
+    private volatile String message;
     private final MessageProducer producer;
     private final int messagesPerSecond;
     private final AdminClient adminClient;
@@ -50,6 +50,10 @@ public class KafkaSynthClient {
         length = Math.max(1, length);
         Log.infof("Setting message size to %s bytes", length);
         this.message = randomString(length);
+    }
+
+    long getPayloadSize() {
+        return message.length();
     }
 
     private static String randomString(long length) {
