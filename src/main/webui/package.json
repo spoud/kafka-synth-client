@@ -11,7 +11,7 @@
     "test": "playwright test"
   },
   "dependencies": {
-    "@mantine/charts": "^8.3.18",
+    "@mantine/charts": "^9.2.1",
     "@mantine/core": "^8.3.18",
     "@mantine/dates": "^8.3.18",
     "@mantine/hooks": "^8.3.14",
