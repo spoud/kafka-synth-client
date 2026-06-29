@@ -51,14 +51,15 @@ function pathToSortKey(p: MessagePath): string {
 export async function loadMessagePaths({
   context,
 }: LoaderFunctionArgs): Promise<MessagePathsLoaderData> {
-  if (context.get(rackUrlContext)?.error) {
+  const rackCtx = context.get(rackUrlContext);
+  if (rackCtx?.error) {
     return {
       messagePaths: [],
-      fetchFailures: [context.get(rackUrlContext).error],
+      fetchFailures: [rackCtx.error],
       lastUpdated: new Date().toISOString(),
     };
   }
-  const listenersData = context.get(rackUrlContext).rackUrls;
+  const listenersData = rackCtx?.rackUrls ?? {};
   const suffix = "/history/message-paths";
   const rackUrls = [
     ...new Set(
