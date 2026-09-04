@@ -78,7 +78,6 @@ public class MessageProducer implements HealthCheck {
     }
 
     public void send(Long key, String value) {
-        Instant send = Instant.now();
         var record = new ProducerRecord<>(config.topic(), null, timeService.currentTimeMillis(), key, value);
         record.headers().add(HEADER_RACK, config.rack().getBytes());
         record.headers().add(HEADER_ADVERTISED_LISTENER, config.advertisedListener().orElse("").getBytes());
@@ -87,9 +86,10 @@ public class MessageProducer implements HealthCheck {
                 Log.error("Failed to send message", exception);
                 metricService.recordProducedFailure();
             } else {
-                Instant ack = Instant.now();
-                lastMessage.set(ack);
-                metricService.recordAckLatency(metadata.topic(), metadata.partition(), Duration.between(send, ack));
+                Instant ackTime = Instant.ofEpochMilli(timeService.currentTimeMillis());
+                Instant sendTime = Instant.ofEpochMilli(metadata.timestamp());
+                lastMessage.set(ackTime);
+                metricService.recordAckLatency(metadata.topic(), metadata.partition(), Duration.between(sendTime, ackTime), metadata.offset());
                 metricService.recordProducedSuccess();
             }
         });
