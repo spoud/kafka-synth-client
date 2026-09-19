@@ -108,7 +108,7 @@ public class MessageConsumer implements Runnable, HealthCheck, AutoCloseable {
                             .map(String::new)
                             .orElse(null);
                     metricService.recordConsumptionTime();
-                    metricService.recordLatency(message.topic(), message.partition(), consumeTime - produceTime, fromRack);
+                    metricService.recordLatency(message.topic(), message.partition(), consumeTime - produceTime, fromRack, message.offset());
                     advertisedListenerRepository.mapRackToUrl(fromRack, advertisedListener);
                     lastReport.updateAndGet(last -> {
                         if (Duration.between(last, Instant.now()).getSeconds() > 10) {
