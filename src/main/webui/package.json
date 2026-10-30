@@ -11,9 +11,9 @@
     "test": "playwright test"
   },
   "dependencies": {
-    "@mantine/charts": "^9.7.3",
-    "@mantine/core": "^9.7.3",
-    "@mantine/dates": "^9.7.3",
+    "@mantine/charts": "^9.7.4",
+    "@mantine/core": "^9.7.4",
+    "@mantine/dates": "^9.7.4",
     "@mantine/hooks": "^9.2.1",
     "@tabler/icons": "^3.49.0",
     "@tabler/icons-react": "^3.49.0",
@@ -35,11 +35,11 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
-    "postcss": "^8.5.31",
+    "postcss": "^8.5.32",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
     "typescript": "npm:@typescript/typescript6@^6.0.3",
-    "typescript-eslint": "^8.72.0",
-    "vite": "^8.3.4"
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5"
   }
 }
