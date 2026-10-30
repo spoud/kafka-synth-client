@@ -23,3 +23,18 @@ for the broker to acknowledge the message. This is especially interesting if you
 
 If you want to compare the acks settings it's best to deploy 2 sets of synth clients with different acks settings
 and a dedicated topic with no replication for `acks=1` setting.
+
+=== Ack latency can be higher than E2E latency
+
+You'd expect the E2E latency of a message to be an upper bound for its ack latency, since a consumer can only read a
+message after the broker has stored it. In practice that isn't always true, even when everything runs on localhost.
+
+The consumer can read a message as soon as the leader advances the high watermark past it. The producer has to wait
+for the produce response to travel back over the network, and then for its I/O thread to run the send callback. If the
+consumer already has a fetch request waiting on the leader, it can receive the message before the producer receives
+the ack. The synth client then records an E2E latency that is lower than the ack latency for the same message.
+
+This only happens for a small share of messages, but it shows up in the high percentiles. If 1% of the messages are
+acked after they were consumed, those messages make up the p99 of the ack latency. The ack p99 then ends up equal to
+or higher than the E2E p99. That's expected behavior, not a measurement error. See
+https://github.com/spoud/kafka-synth-client/pull/97[PR #97] for the experiment that showed this.
