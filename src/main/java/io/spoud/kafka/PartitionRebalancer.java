@@ -11,8 +11,12 @@ import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewPartitionReassignment;
 import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.TopicDescription;
+import org.apache.kafka.common.ElectionType;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.TopicPartitionInfo;
+import org.apache.kafka.common.errors.AuthorizationException;
+import org.apache.kafka.common.errors.ElectionNotNeededException;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
@@ -24,7 +28,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -42,6 +48,8 @@ public class PartitionRebalancer {
     MessageProducer producer;
 
     private boolean refreshPartitionsEnabled = true;
+    private volatile boolean rebalancingAllowed = true;
+    private List<Integer> unmeasuredBrokersWarned = List.of();
     private final AtomicBoolean initialRefreshDone = new AtomicBoolean(false);
     private final Map<Integer, List<Integer>> partitionsByBroker = new ConcurrentHashMap<>();
     private final Map<Integer, String> rackByPartition = new ConcurrentHashMap<>();
@@ -50,16 +58,17 @@ public class PartitionRebalancer {
         return !initialRefreshDone.get();
     }
 
-    NewPartitionReassignment genReassignment(Node leader, int replicationFactor, Collection<Node> nodes) {
-        var replicaCandidates = nodes.stream()
-                .filter(n -> n.id() != leader.id())
-                .collect(ArrayList<Node>::new, ArrayList::add, ArrayList::addAll);
-        Collections.shuffle(replicaCandidates);
+    /**
+     * Puts the new leader first and keeps the current replicas, so that a broker which is already a replica only needs
+     * a reorder (no data movement), and repeating the reassignment on the next refresh targets the same replica set.
+     */
+    NewPartitionReassignment genReassignment(Node leader, List<Node> currentReplicas) {
         var replicaIds = new ArrayList<Integer>();
         replicaIds.add(leader.id());
-        // add some random brokers as replicas
-        for (var i = 0; i < replicationFactor - 1; i++) {
-            replicaIds.add(replicaCandidates.get(i).id());
+        for (var replica : currentReplicas) {
+            if (replicaIds.size() < currentReplicas.size() && replica.id() != leader.id()) {
+                replicaIds.add(replica.id());
+            }
         }
         return new NewPartitionReassignment(replicaIds);
     }
@@ -105,18 +114,17 @@ public class PartitionRebalancer {
         }
     }
 
-    int getTopicReplicationFactor(TopicDescription topicDescription) {
-        return topicDescription.partitions().get(0).replicas().size();
-    }
-
     public Map<Integer, List<Integer>> getPartitionsByBroker() {
         return Collections.unmodifiableMap(partitionsByBroker);
     }
 
     void reassignPartitionsToBrokers(TopicDescription topicDescription, Collection<Node> nodes) {
-        // build a map of broker -> list of partitions
+        // build a map of broker -> list of partitions it currently leads
         var brokers = new ArrayList<>(nodes);
         final var newPartitionAssignment = new HashMap<Integer, List<Integer>>();
+        for (var broker : brokers) {
+            newPartitionAssignment.put(broker.id(), new ArrayList<>());
+        }
         for (var partition : topicDescription.partitions()) {
             var leader = partition.leader();
             if (leader == null) {
@@ -129,16 +137,21 @@ public class PartitionRebalancer {
         for (var entry : newPartitionAssignment.entrySet()) {
             Log.infov("Broker {0} has partitions {1}", entry.getKey(), entry.getValue());
         }
-        // sort the brokers by the number of partitions they are a leader for
-        brokers.sort(Comparator.comparingLong(n -> newPartitionAssignment.computeIfAbsent(n.id(), (k) -> new ArrayList<>()).size()));
-        var i = 0;
-        var j = brokers.size() - 1;
-        if (!newPartitionAssignment.get(brokers.get(i).id()).isEmpty()) {
-            // each broker has at least one partition, nothing to do
-            Log.debug("Each broker has at least one partition. Will not reassign partitions");
-            partitionsByBroker.putAll(newPartitionAssignment);
+        // the metrics are labeled with the actual leaders, so record them before attempting any change
+        partitionsByBroker.putAll(copyOf(newPartitionAssignment));
+        if (!config.rebalancePartitions() || !rebalancingAllowed) {
+            warnAboutUnmeasuredBrokers(newPartitionAssignment);
             return;
         }
+
+        var partitionInfos = topicDescription.partitions().stream()
+                .collect(Collectors.toMap(TopicPartitionInfo::partition, p -> p));
+        var reassignments = new HashMap<TopicPartition, Optional<NewPartitionReassignment>>();
+        var newLeaders = new HashMap<Integer, Integer>();
+        // sort the brokers by the number of partitions they are a leader for
+        brokers.sort(Comparator.comparingLong(n -> newPartitionAssignment.get(n.id()).size()));
+        var i = 0;
+        var j = brokers.size() - 1;
         while (i < j) {
             var poorBroker = brokers.get(i);
             var richBroker = brokers.get(j);
@@ -149,29 +162,106 @@ public class PartitionRebalancer {
             var partitionToGive = newPartitionAssignment.get(richBroker.id()).removeFirst();
             newPartitionAssignment.get(poorBroker.id()).add(partitionToGive);
             var tp = new TopicPartition(config.topic(), partitionToGive);
-
-            var assignment = genReassignment(poorBroker, getTopicReplicationFactor(topicDescription), nodes);
-            try {
-                adminClient.alterPartitionReassignments(Map.of(tp, Optional.of(assignment))).all().getNow(null);
-            } catch (Exception e) {
-                Log.errorv(e, "Failed to reassign partition {0} to broker {1}", partitionToGive, poorBroker.id());
-                break;
-            }
+            reassignments.put(tp, Optional.of(genReassignment(poorBroker, partitionInfos.get(partitionToGive).replicas())));
+            newLeaders.put(partitionToGive, poorBroker.id());
 
             if (newPartitionAssignment.get(richBroker.id()).size() < 2) {
                 j--;
             }
             i++;
         }
-        for (var entry : newPartitionAssignment.entrySet()) {
-            Log.infov("New assignment: Broker {0} has partitions {1}", entry.getKey(), entry.getValue());
+        if (reassignments.isEmpty()) {
+            Log.debug("Each broker has at least one partition. Will not reassign partitions");
+            return;
         }
-        partitionsByBroker.putAll(newPartitionAssignment);
-        producer.recreateProducer(); // recreate the producer to make sure that it is aware of the new partitions
+
+        Log.infov("Moving leadership of partitions to brokers {0}", newLeaders);
+        adminClient.alterPartitionReassignments(reassignments).all().whenComplete((ignored, throwable) -> {
+            if (throwable != null) {
+                handleRebalanceFailure("reassign partitions", throwable);
+                return;
+            }
+            electPreferredLeaders(newLeaders);
+        });
+    }
+
+    /**
+     * A reassignment only changes the replica order. Leadership moves to the new first replica with a preferred
+     * leader election, which fails while that replica is still catching up. The next refresh then tries again.
+     */
+    private void electPreferredLeaders(Map<Integer, Integer> newLeaders) {
+        var partitions = newLeaders.keySet().stream()
+                .map(p -> new TopicPartition(config.topic(), p))
+                .collect(Collectors.toSet());
+        adminClient.electLeaders(ElectionType.PREFERRED, partitions).partitions().whenComplete((results, throwable) -> {
+            if (throwable != null) {
+                handleRebalanceFailure("elect preferred leaders", throwable);
+                return;
+            }
+            var moved = new HashMap<Integer, List<Integer>>(copyOf(partitionsByBroker));
+            var changed = false;
+            for (var result : results.entrySet()) {
+                Integer partition = result.getKey().partition(); // boxed, so that remove() removes the value and not an index
+                var error = result.getValue();
+                if (error.isPresent() && !(error.get() instanceof ElectionNotNeededException)) {
+                    Log.infov("Leadership of partition {0} not moved yet: {1}", partition, error.get().getMessage());
+                    continue;
+                }
+                moved.values().forEach(leaderPartitions -> leaderPartitions.remove(partition));
+                moved.computeIfAbsent(newLeaders.get(partition), (k) -> new ArrayList<>()).add(partition);
+                changed |= error.isEmpty();
+            }
+            for (var entry : moved.entrySet()) {
+                Log.infov("New assignment: Broker {0} has partitions {1}", entry.getKey(), entry.getValue());
+            }
+            partitionsByBroker.putAll(moved);
+            if (changed) {
+                producer.recreateProducer(); // recreate the producer to make sure that it is aware of the new leaders
+            }
+        });
+    }
+
+    /**
+     * Logged only when the set of brokers changes, so that a permanently unbalanced topic does not warn every minute.
+     */
+    private void warnAboutUnmeasuredBrokers(Map<Integer, List<Integer>> partitionsByLeader) {
+        var unmeasured = partitionsByLeader.entrySet().stream()
+                .filter(e -> e.getValue().isEmpty())
+                .map(Map.Entry::getKey)
+                .sorted()
+                .toList();
+        if (!unmeasured.isEmpty() && !unmeasured.equals(unmeasuredBrokersWarned)) {
+            Log.warnv("Brokers {0} lead no partition of topic {1} and partition rebalancing is off, so there are no "
+                    + "synth_client_ack_latency_ms and synth_client_e2e_latency_ms series for them", unmeasured, config.topic());
+        }
+        unmeasuredBrokersWarned = unmeasured;
+    }
+
+    private void handleRebalanceFailure(String action, Throwable throwable) {
+        var cause = (throwable instanceof CompletionException || throwable instanceof ExecutionException) && throwable.getCause() != null
+                ? throwable.getCause()
+                : throwable;
+        if (cause instanceof AuthorizationException) {
+            rebalancingAllowed = false;
+            Log.warnv("Not allowed to {0} ({1}). Partition rebalancing is disabled until restart, so brokers that lead no partition of topic {2} are not measured. "
+                    + "Grant ALTER on the cluster, move the leaders manually, or set synth-client.rebalance-partitions=false.",
+                    action, cause.getClass().getSimpleName(), config.topic());
+        } else {
+            Log.errorv(cause, "Failed to {0}, will retry on the next refresh", action);
+        }
+    }
+
+    private static Map<Integer, List<Integer>> copyOf(Map<Integer, List<Integer>> assignment) {
+        var copy = new HashMap<Integer, List<Integer>>();
+        assignment.forEach((broker, partitions) -> copy.put(broker, new ArrayList<>(partitions)));
+        return copy;
     }
 
     @PostConstruct
     void init() {
+        if (!config.rebalancePartitions()) {
+            Log.info("Partition rebalancing is disabled");
+        }
         refreshPartitions();
     }
 
@@ -189,7 +279,7 @@ public class PartitionRebalancer {
         if (!refreshPartitionsEnabled) {
             return;
         }
-        Log.info("Rebalancing partitions to make sure that the E2E test hits each node");
+        Log.info("Refreshing partition leaders to make sure that the E2E test hits each node");
         // figure out how many brokers there are
         var cluster = adminClient.describeCluster();
         cluster.nodes().whenComplete((nodes, throwable) -> {
@@ -209,11 +299,13 @@ public class PartitionRebalancer {
                 if (topicDescr.partitions().size() < nodes.size()) {
                     var partitionsToCreate = nodes.size() - topicDescr.partitions().size();
                     Log.infov("Will create {0} additional partitions", partitionsToCreate);
-                    try {
-                        adminClient.createPartitions(Map.of(config.topic(), NewPartitions.increaseTo(nodes.size()))).all().getNow(null);
-                    } catch (Exception e) {
-                        throw new RuntimeException("Failed to create partitions", e);
-                    }
+                    adminClient.createPartitions(Map.of(config.topic(), NewPartitions.increaseTo(nodes.size()))).all().whenComplete((ignored, throwable2) -> {
+                        if (throwable2 != null) {
+                            Log.errorv(throwable2, "Failed to create partitions");
+                            return;
+                        }
+                        producer.recreateProducer(); // make sure that the producer is aware of the new partitions
+                    });
                 }
 
                 // make sure that each broker is a leader for at least one partition

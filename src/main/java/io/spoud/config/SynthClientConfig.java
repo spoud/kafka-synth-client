@@ -24,6 +24,8 @@ public interface SynthClientConfig {
 
     int topicReplicationFactor();
 
+    boolean rebalancePartitions();
+
     Duration samplingTimeWindow();
 
     int minSamplesFirstWindow();

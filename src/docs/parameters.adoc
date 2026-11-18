@@ -53,6 +53,10 @@ The preferred way to configure the client is to use environment variables. Below
 | 1
 | Replication factor to use when creating the topic.
 
+| `SYNTH_CLIENT_REBALANCE_PARTITIONS`
+| true
+| If a broker leads no partition of the topic, reorder the replicas of a partition and run a preferred leader election so that every broker is measured. This requires `ALTER` permissions on the cluster. Without them the client logs one warning and stops trying. Set it to `false` to keep the client away from partition assignments. With `false`, or without `ALTER`, a broker that leads no partition of the topic gets no `synth_client_ack_latency_ms` and `synth_client_e2e_latency_ms` series. To measure it, move a partition leader to it yourself, for example with `kafka-reassign-partitions.sh` followed by `kafka-leader-election.sh --election-type PREFERRED`.
+
 | `SYNTH_CLIENT_PUBLISH_HISTOGRAM_BUCKETS`
 | false
 | Will publish the histogram buckets to the metrics endpoint if enabled. `..., synth_client_e2e_latency_ms_bucket{...,le="41.0",} 902.0, synth_client_e2e_latency_ms_bucket{...,le="46.0",} 902.0, ...`
