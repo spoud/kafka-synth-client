@@ -37,6 +37,7 @@ In order to work properly, the client's Kafka user needs to have ACL permissions
 - Describe, Read, Write, Alter the configured topic
 - Read the configured consumer group
 - Describe the cluster
+- Optional: Alter the cluster, so that the client can make every broker lead a partition of the topic (see `SYNTH_CLIENT_REBALANCE_PARTITIONS` in <<Parameters>>). Without it, brokers that lead no partition have no latency metrics.
 
 For information on how to configure the consumer group and the topic, see the <<Parameters>> section.
 An example for setting this up for a Strimzi cluster is available in the `examples/` folder.

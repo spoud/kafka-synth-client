@@ -71,6 +71,11 @@ class TimeServiceTest {
             }
 
             @Override
+            public boolean rebalancePartitions() {
+                return true;
+            }
+
+            @Override
             public Duration samplingTimeWindow() {
                 return null;
             }
